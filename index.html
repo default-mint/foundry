@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Foundry. A good cap, no fuss.</title>
+<meta name="description" content="Foundry builds trucker hats and caps for everyone. Fourteen on the wall, one size adjustable, free US shipping over $100. Stack and save.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ──────────────────────────────────────────────────────────────
+     FOUNDRY design intent
+     Layout: "Pegboard Grid": a workshop/hardware storefront. Hats hang
+       on a textured pegboard wall (radial peg-hole pattern) in a tactile
+       grid, each on a peg hook; cards lift off the peg on hover.
+     Palette: denim navy #29405A, oat canvas #E4D8C4, cream #F4EEE2,
+       safety-orange pop #E8622A, ink #1A1916. Backgrounds carry canvas
+       texture + pegboard dot pattern, never flat.
+     Type: Zilla Slab (display slab serif) + Inter Tight (body).
+     Voice: plain, sturdy, a little dry. "A good cap, no fuss."
+     Motion: hat cards translate up + cast a deeper shadow ("lift off
+       the peg") on hover; peg hook stays put.
+     ────────────────────────────────────────────────────────────── */
+  :root {
+    --navy: #29405A;
+    --navy-deep: #1E3047;
+    --oat: #E4D8C4;
+    --oat-deep: #CDBFA6;
+    --cream: #F4EEE2;
+    --orange: #E8622A;
+    --orange-deep: #C84E1C;
+    --ink: #1A1916;
+    --ink-soft: rgba(26, 25, 22, 0.62);
+    --line: rgba(26, 25, 22, 0.18);
+    --line-soft: rgba(26, 25, 22, 0.09);
+    --display: 'Zilla Slab', Georgia, serif;
+    --body: 'Inter Tight', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--body);
+    color: var(--ink);
+    background: var(--cream);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  img { display: block; max-width: 100%; }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+
+  /* canvas paper texture used on light sections */
+  .canvas-tex {
+    background-image:
+      repeating-linear-gradient(90deg, rgba(26,25,22,0.018) 0 1px, transparent 1px 3px),
+      repeating-linear-gradient(0deg, rgba(26,25,22,0.018) 0 1px, transparent 1px 3px);
+  }
+
+  /* ───── Announcement bars ───── */
+  .announce-help {
+    background: var(--cream);
+    color: var(--ink);
+    padding: 7px 16px;
+    text-align: center;
+    font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
+    font-weight: 600;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .announce-help a { color: var(--navy); font-weight: 700; margin-left: 8px; letter-spacing: 0.14em; }
+  .announce-help a:hover { color: var(--orange); }
+  @media (max-width: 700px){ .announce-help{ font-size:10px; padding:6px 12px; letter-spacing:0.14em; } }
+
+  .announce-loud {
+    background: var(--orange);
+    color: var(--cream);
+    text-align: center;
+    font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase;
+    font-weight: 700;
+    overflow: hidden; position: relative;
+  }
+  .announce-loud::before, .announce-loud::after {
+    content:''; position:absolute; top:0; bottom:0; width:70px; z-index:2; pointer-events:none;
+  }
+  .announce-loud::before { left:0; background: linear-gradient(to right, var(--orange), transparent); }
+  .announce-loud::after { right:0; background: linear-gradient(to left, var(--orange), transparent); }
+  .announce-loud-track { position: relative; height: 40px; }
+  .loud-msg {
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    white-space:nowrap; opacity:0; transform:translateY(8px);
+    transition: opacity .5s ease, transform .55s cubic-bezier(.2,.7,.2,1); padding:0 16px;
+  }
+  .loud-msg.active { opacity:1; transform:translateY(0); }
+  .loud-msg .pulse {
+    display:inline-block; width:6px; height:6px; border-radius:999px; background: var(--navy);
+    margin-right:12px; vertical-align:middle; animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(41,64,90,0.55); }
+    50% { box-shadow: 0 0 0 7px rgba(41,64,90,0); }
+  }
+  @media (max-width:700px){ .announce-loud{ font-size:10.5px; letter-spacing:0.12em; } .announce-loud-track{ height:36px; } .loud-msg .pulse{ margin-right:8px; width:5px; height:5px; } .announce-loud::before,.announce-loud::after{ width:28px; } }
+
+  .announce {
+    background: var(--ink);
+    color: var(--oat);
+    padding: 9px 16px; text-align: center;
+    font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 500;
+  }
+  .announce-track { display:flex; justify-content:center; align-items:center; gap:14px; flex-wrap:wrap; }
+  .announce-track .dot { color: var(--orange); }
+  @media (max-width:700px){ .announce{ font-size:10px; padding:7px 12px; letter-spacing:0.1em; } .announce-track{ gap:9px; } }
+
+  /* ───── Sticky nav ───── */
+  .topbar {
+    position: sticky; top: 0; z-index: 50;
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 16px clamp(18px, 4vw, 56px);
+    background: rgba(244,238,226,0.92);
+    backdrop-filter: saturate(140%) blur(10px);
+    -webkit-backdrop-filter: saturate(140%) blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .wordmark {
+    font-family: var(--display); font-weight: 700;
+    font-size: 24px; letter-spacing: 0.04em; text-transform: uppercase;
+    display:flex; align-items:center; gap:10px;
+  }
+  .wordmark .rivet { width:11px; height:11px; border-radius:999px; background: var(--orange); box-shadow: inset 0 0 0 2px rgba(0,0,0,0.18); }
+  .navlinks { display:flex; gap: clamp(14px,2.4vw,32px); font-size:12px; letter-spacing:0.14em; text-transform:uppercase; font-weight:600; }
+  .navlinks a { transition: color .2s; }
+  .navlinks a:hover { color: var(--orange); }
+  .cart-btn { display:flex; align-items:center; gap:8px; font-size:12px; letter-spacing:0.14em; text-transform:uppercase; font-weight:700; }
+  .cart-count { display:inline-flex; align-items:center; justify-content:center; min-width:22px; height:22px; padding:0 6px; background: var(--navy); color: var(--cream); border-radius:4px; font-size:11px; font-weight:700; }
+  .cart-count.empty { background: transparent; color: var(--ink-soft); box-shadow: inset 0 0 0 1px var(--line); }
+  @media (max-width:760px){ .navlinks{ display:none; } }
+
+  /* ───── Hero ───── */
+  .hero {
+    display:grid; grid-template-columns: 1.05fr 0.95fr;
+    background: var(--navy);
+    color: var(--cream);
+    min-height: min(78vh, 720px);
+    overflow:hidden;
+  }
+  .hero-text {
+    padding: clamp(36px,5vw,84px) clamp(24px,4vw,68px);
+    display:flex; flex-direction:column; justify-content:center;
+    position:relative;
+  }
+  .hero-eyebrow {
+    font-size:11px; letter-spacing:0.34em; text-transform:uppercase; font-weight:600;
+    color: var(--oat); display:flex; align-items:center; gap:12px; margin-bottom:24px;
+  }
+  .hero-eyebrow::before { content:''; width:30px; height:2px; background: var(--orange); }
+  .hero-h1 {
+    font-family: var(--display); font-weight:700;
+    font-size: clamp(46px, 7.2vw, 104px); line-height:0.95; letter-spacing:-0.01em;
+  }
+  .hero-h1 .pop { color: var(--orange); }
+  .hero-sub { font-size: clamp(15px,1.5vw,18px); line-height:1.6; max-width:460px; margin-top:22px; color: rgba(244,238,226,0.82); }
+  .hero-cta { display:flex; gap:14px; flex-wrap:wrap; margin-top:34px; }
+  .btn-solid {
+    background: var(--orange); color: var(--cream);
+    padding: 15px 30px; font-size:12px; letter-spacing:0.18em; text-transform:uppercase; font-weight:700;
+    border-radius:3px; transition: background .2s, transform .2s;
+  }
+  .btn-solid:hover { background: var(--orange-deep); transform: translateY(-2px); }
+  .btn-ghost {
+    padding: 15px 30px; font-size:12px; letter-spacing:0.18em; text-transform:uppercase; font-weight:700;
+    border:1px solid rgba(244,238,226,0.4); border-radius:3px; transition: all .2s;
+  }
+  .btn-ghost:hover { border-color: var(--oat); background: rgba(244,238,226,0.08); }
+  .hero-stats { display:flex; gap: clamp(22px,3vw,44px); margin-top:44px; }
+  .hero-stat .n { font-family: var(--display); font-weight:600; font-size:26px; }
+  .hero-stat .l { font-size:10px; letter-spacing:0.2em; text-transform:uppercase; color: rgba(244,238,226,0.6); margin-top:2px; }
+  .hero-image { position:relative; overflow:hidden; background: var(--navy-deep); }
+  .hero-image img { width:100%; height:100%; object-fit:cover; object-position:center 55%; }
+  .hero-image::after {
+    content:'Distressed unstructured · in dock'; position:absolute; bottom:14px; left:14px;
+    font-size:9px; letter-spacing:0.24em; text-transform:uppercase; color: var(--ink-soft);
+    background: rgba(244,238,226,0.85); padding:6px 10px; border-radius:3px; font-weight:600;
+  }
+  @media (max-width:880px){
+    .hero{ grid-template-columns:1fr; grid-template-rows: auto minmax(46vh,1fr); }
+    .hero-image{ order:2; min-height:46vh; }
+    .hero-text{ order:1; padding:40px 24px 48px; }
+  }
+
+  /* ───── Section heading ───── */
+  .section { padding: clamp(56px,8vw,108px) clamp(18px,4vw,56px); }
+  .section-head { display:flex; align-items:flex-end; justify-content:space-between; gap:18px; flex-wrap:wrap; margin-bottom: clamp(34px,5vw,60px); }
+  .section-eyebrow { font-size:11px; letter-spacing:0.3em; text-transform:uppercase; font-weight:600; color: var(--orange); margin-bottom:12px; }
+  .section-title { font-family: var(--display); font-weight:700; font-size: clamp(40px,5.6vw,76px); line-height:0.95; letter-spacing:-0.01em; }
+  .section-meta { font-size:12px; letter-spacing:0.16em; text-transform:uppercase; color: var(--ink-soft); font-weight:600; }
+
+  /* ───── Pegboard grid ───── */
+  .pegboard {
+    background: var(--oat);
+    position: relative;
+    /* peg-hole dot pattern */
+    background-image: radial-gradient(circle, rgba(26,25,22,0.16) 1.6px, transparent 1.8px);
+    background-size: 26px 26px;
+    background-position: 13px 13px;
+  }
+  .pegboard::before {
+    content:''; position:absolute; inset:0; pointer-events:none;
+    box-shadow: inset 0 0 90px rgba(26,25,22,0.10);
+  }
+  .grid {
+    display:grid; grid-template-columns: repeat(2, 1fr);
+    gap: clamp(34px,4vw,56px) clamp(20px,3vw,40px);
+    position: relative;
+  }
+  @media (min-width: 720px){ .grid{ grid-template-columns: repeat(3, 1fr); } }
+  @media (min-width: 1120px){ .grid{ grid-template-columns: repeat(4, 1fr); } }
+
+  .card { position: relative; cursor: pointer; padding-top: 18px; }
+  /* peg hook */
+  .card .hook {
+    position:absolute; top:0; left:50%; transform: translateX(-50%);
+    width:14px; height:14px; border-radius:999px;
+    background: var(--ink);
+    box-shadow: 0 2px 0 rgba(0,0,0,0.2);
+    z-index:3;
+  }
+  .card .hook::after {
+    content:''; position:absolute; top:9px; left:50%; transform:translateX(-50%);
+    width:2px; height:18px; background: var(--ink); border-radius:2px;
+  }
+  .card-plate {
+    background: var(--cream);
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 6px 16px rgba(26,25,22,0.12);
+    transition: transform .42s cubic-bezier(.2,.7,.2,1), box-shadow .42s cubic-bezier(.2,.7,.2,1);
+    position: relative;
+    border: 1px solid rgba(26,25,22,0.06);
+  }
+  .card:hover .card-plate { transform: translateY(-12px); box-shadow: 0 22px 36px rgba(26,25,22,0.22); }
+  .card-image { aspect-ratio: 1/1; background: #fff; overflow:hidden; position:relative; }
+  .card-image img { width:100%; height:100%; object-fit: cover; object-position:center; transition: transform .6s cubic-bezier(.2,.7,.2,1); mix-blend-mode: multiply; }
+  .card:hover .card-image img { transform: scale(1.05); }
+  .card-overlay {
+    position:absolute; inset:0; display:flex; align-items:flex-end; justify-content:center; padding:16px;
+    background: linear-gradient(to top, rgba(26,25,22,0.34), transparent 55%);
+    opacity:0; transition: opacity .28s; pointer-events:none;
+  }
+  .card:hover .card-overlay { opacity:1; }
+  .card-quick {
+    background: var(--orange); color: var(--cream);
+    font-size:10px; letter-spacing:0.2em; text-transform:uppercase; font-weight:700;
+    padding:11px 20px; border-radius:3px; pointer-events:auto;
+  }
+  .card-quick:hover { background: var(--orange-deep); }
+  .card-meta { padding: 14px 16px 16px; }
+  .card-kind { font-size:10px; letter-spacing:0.18em; text-transform:uppercase; color: var(--navy); font-weight:700; margin-bottom:5px; }
+  .card-row { display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+  .card-name { font-family: var(--display); font-weight:600; font-size:21px; line-height:1; }
+  .card-price { font-size:14px; font-weight:700; letter-spacing:0.02em; white-space:nowrap; }
+
+  /* ───── Editorial band ───── */
+  .band {
+    background: var(--navy); color: var(--cream);
+    padding: clamp(64px,9vw,128px) clamp(18px,4vw,56px);
+  }
+  .band-grid { max-width:1180px; margin:0 auto; display:grid; grid-template-columns: 1fr 0.85fr; gap: clamp(40px,6vw,88px); align-items:center; }
+  @media (max-width:880px){ .band-grid{ grid-template-columns:1fr; } }
+  .band-eyebrow { font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color: var(--oat); font-weight:600; margin-bottom:22px; display:flex; align-items:center; gap:12px; }
+  .band-eyebrow::before { content:''; width:30px; height:2px; background: var(--orange); }
+  .band h2 { font-family: var(--display); font-weight:700; font-size: clamp(34px,4.6vw,60px); line-height:1.02; margin-bottom:24px; }
+  .band p { font-size: clamp(15px,1.4vw,17px); line-height:1.75; color: rgba(244,238,226,0.82); margin-bottom:16px; max-width:520px; }
+  .band p .pop { color: var(--orange); font-weight:600; }
+  .band-image { aspect-ratio: 4/5; overflow:hidden; border-radius:6px; position:relative; box-shadow: 0 18px 40px rgba(0,0,0,0.32); }
+  .band-image img { width:100%; height:100%; object-fit:cover; object-position:center 35%; }
+
+  /* ───── Promise trio ───── */
+  .promise { background: var(--cream); padding: clamp(56px,8vw,108px) clamp(18px,4vw,56px); }
+  .promise-inner { max-width:1100px; margin:0 auto; display:grid; grid-template-columns: repeat(3,1fr); gap: clamp(28px,4vw,56px); }
+  @media (max-width:760px){ .promise-inner{ grid-template-columns:1fr; gap:32px; } }
+  .promise-item .pno { font-size:11px; letter-spacing:0.26em; text-transform:uppercase; color: var(--orange); font-weight:700; margin-bottom:14px; display:block; }
+  .promise-item h4 { font-family: var(--display); font-weight:600; font-size:24px; margin-bottom:10px; }
+  .promise-item p { font-size:14px; line-height:1.7; color: var(--ink-soft); }
+
+  /* ───── Footer ───── */
+  footer { background: var(--ink); color: var(--oat); padding: clamp(56px,7vw,96px) clamp(18px,4vw,56px) 30px; }
+  .foot-grid { max-width:1280px; margin:0 auto; display:grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: clamp(28px,5vw,72px); padding-bottom:44px; border-bottom:1px solid rgba(228,216,196,0.16); }
+  @media (max-width:880px){ .foot-grid{ grid-template-columns:1fr 1fr; gap:30px; } }
+  .foot-mark { font-family: var(--display); font-weight:700; font-size:32px; letter-spacing:0.04em; text-transform:uppercase; margin-bottom:14px; }
+  .foot-blurb { font-size:13px; line-height:1.7; color: rgba(228,216,196,0.62); max-width:300px; }
+  .foot-h { font-size:10px; letter-spacing:0.26em; text-transform:uppercase; color: var(--orange); margin-bottom:15px; font-weight:700; }
+  .foot-list { list-style:none; display:flex; flex-direction:column; gap:9px; }
+  .foot-list a { font-size:13px; color: rgba(228,216,196,0.8); transition: color .2s; }
+  .foot-list a:hover { color: var(--cream); }
+  .foot-bottom { max-width:1280px; margin:22px auto 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; font-size:11px; color: rgba(228,216,196,0.5); letter-spacing:0.06em; }
+
+  /* ───── Modal ───── */
+  .modal-bg { position:fixed; inset:0; background: rgba(26,25,22,0.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); opacity:0; pointer-events:none; transition: opacity .28s; z-index:90; }
+  .modal-bg.open { opacity:1; pointer-events:auto; }
+  .modal {
+    position:fixed; top:50%; left:50%; transform: translate(-50%, calc(-50% + 24px));
+    width: min(900px, calc(100vw - 32px)); max-height: calc(100vh - 64px);
+    background: var(--cream); z-index:91; opacity:0; pointer-events:none;
+    transition: transform .36s cubic-bezier(.2,.7,.2,1), opacity .28s;
+    overflow:hidden; display:grid; grid-template-columns: 1fr 1fr; border-radius:8px;
+  }
+  .modal.open { opacity:1; pointer-events:auto; transform: translate(-50%,-50%); }
+  .modal-image { background:#fff; overflow:hidden; aspect-ratio: 1/1; }
+  .modal-image img { width:100%; height:100%; object-fit:cover; object-position:center; mix-blend-mode: multiply; }
+  .modal-info { padding: clamp(26px,3.4vw,44px); display:flex; flex-direction:column; overflow-y:auto; }
+  .modal-kind { font-size:11px; letter-spacing:0.24em; text-transform:uppercase; color: var(--navy); font-weight:700; margin-bottom:12px; }
+  .modal-name { font-family: var(--display); font-weight:700; font-size: clamp(34px,4.4vw,52px); line-height:0.96; margin-bottom:10px; }
+  .modal-price { font-size:18px; font-weight:700; margin-bottom:22px; }
+  .modal-desc { font-size:14px; line-height:1.7; color: var(--ink-soft); margin-bottom:24px; padding-bottom:22px; border-bottom:1px solid var(--line); }
+  .modal-variant { font-size:10px; letter-spacing:0.24em; text-transform:uppercase; color: var(--ink-soft); font-weight:600; margin-bottom:10px; }
+  .variant-chip {
+    display:inline-flex; align-items:center; gap:8px;
+    border:1px solid var(--ink); background: var(--ink); color: var(--cream);
+    padding: 11px 18px; font-size:12px; font-weight:600; letter-spacing:0.04em; border-radius:3px; margin-bottom:26px;
+  }
+  .variant-chip .tick { width:7px; height:7px; border-radius:999px; background: var(--orange); }
+  .modal-add { background: var(--orange); color: var(--cream); padding:17px; font-size:12px; letter-spacing:0.2em; text-transform:uppercase; font-weight:700; margin-top:auto; border-radius:3px; transition: background .2s; }
+  .modal-add:hover { background: var(--orange-deep); }
+  .modal-close { position:absolute; top:12px; right:12px; width:36px; height:36px; border-radius:999px; background: var(--cream); display:flex; align-items:center; justify-content:center; z-index:2; box-shadow: 0 2px 12px rgba(26,25,22,0.2); transition: transform .2s; }
+  .modal-close:hover { transform: rotate(90deg); }
+  @media (max-width:760px){ .modal{ grid-template-columns:1fr; max-height:92vh; overflow-y:auto; } }
+
+  /* ───── Cart drawer ───── */
+  .cart { position:fixed; top:0; right:0; width: min(440px, 92vw); height:100vh; background: var(--cream); z-index:92; transform: translateX(100%); transition: transform .36s cubic-bezier(.2,.7,.2,1); display:flex; flex-direction:column; box-shadow: -2px 0 24px rgba(0,0,0,0.12); }
+  .cart.open { transform: translateX(0); }
+  .cart-header { padding: 20px 24px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; }
+  .cart-title { font-family: var(--display); font-weight:700; font-size:22px; letter-spacing:0.02em; }
+  .cart-close { font-size:12px; letter-spacing:0.2em; text-transform:uppercase; color: var(--ink-soft); font-weight:600; }
+  .cart-items { flex:1; overflow-y:auto; padding: 4px 24px; }
+  .cart-empty { padding:80px 0; text-align:center; color: var(--ink-soft); }
+  .cart-empty p { font-family: var(--display); font-size:20px; margin-bottom:10px; color: var(--ink); font-weight:600; }
+  .cart-empty span { font-size:13px; }
+  .cart-line { display:grid; grid-template-columns: 72px 1fr; gap:14px; padding:18px 0; border-bottom:1px solid var(--line-soft); }
+  .cart-line-img { width:72px; height:72px; overflow:hidden; background:#fff; border-radius:4px; }
+  .cart-line-img img { width:100%; height:100%; object-fit:cover; mix-blend-mode: multiply; }
+  .cart-line-info { display:flex; flex-direction:column; justify-content:space-between; }
+  .cart-line-top { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+  .cart-line-name { font-family: var(--display); font-weight:600; font-size:18px; line-height:1.05; }
+  .cart-line-meta { font-size:11px; color: var(--ink-soft); margin-top:4px; letter-spacing:0.04em; }
+  .cart-line-price { font-size:13px; font-weight:700; white-space:nowrap; }
+  .cart-line-bottom { display:flex; justify-content:space-between; align-items:center; }
+  .qty { display:inline-flex; align-items:center; border:1px solid var(--line); border-radius:4px; padding:0 4px; }
+  .qty button { width:26px; height:26px; color: var(--ink); font-size:16px; display:flex; align-items:center; justify-content:center; }
+  .qty button:hover { color: var(--orange); }
+  .qty span { padding:0 8px; font-size:12px; min-width:18px; text-align:center; font-weight:600; }
+  .cart-remove { font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color: var(--ink-soft); text-decoration:underline; text-underline-offset:3px; }
+  .cart-remove:hover { color: var(--orange); }
+  .cart-foot { border-top:1px solid var(--line); padding:18px 24px 24px; background: var(--oat); }
+  .savings-line { display:flex; flex-direction:column; gap:4px; font-size:12px; padding:2px 0 6px; color: var(--navy); font-weight:600; }
+  .total-line { display:flex; justify-content:space-between; align-items:baseline; padding:10px 0 14px; border-top:1px solid var(--line); margin-top:6px; }
+  .total-line .total-l { font-size:11px; letter-spacing:0.24em; text-transform:uppercase; color: var(--ink-soft); font-weight:600; }
+  .total-line .total-v { font-family: var(--display); font-weight:700; font-size:28px; }
+  .cart-checkout { width:100%; background: var(--orange); color: var(--cream); padding:17px; font-size:12px; letter-spacing:0.2em; text-transform:uppercase; font-weight:700; text-align:center; display:block; border-radius:3px; transition: background .2s; }
+  .cart-checkout:hover { background: var(--orange-deep); }
+  .cart-hint { font-size:11px; color: var(--ink-soft); text-align:center; margin-top:10px; line-height:1.5; }
+
+  /* ───── Toast ───── */
+  .toast { position:fixed; bottom:24px; left:50%; transform: translateX(-50%) translateY(40px); background: var(--ink); color: var(--cream); padding:14px 22px; font-size:12px; letter-spacing:0.14em; text-transform:uppercase; font-weight:600; z-index:100; opacity:0; pointer-events:none; transition: opacity .24s, transform .36s cubic-bezier(.2,.7,.2,1); border-radius:4px; }
+  .toast.show { opacity:1; transform: translateX(-50%) translateY(0); }
+
+  /* ───── Reveal ───── */
+  .reveal { opacity:0; transform: translateY(18px); transition: opacity .8s ease, transform .8s cubic-bezier(.2,.7,.2,1); }
+  .reveal.in { opacity:1; transform: translateY(0); }
+  .stagger > * { opacity:0; transform: translateY(16px); transition: opacity .55s ease, transform .55s cubic-bezier(.2,.7,.2,1); }
+  .stagger.in > * { opacity:1; transform: translateY(0); }
+  .stagger.in > *:nth-child(1){transition-delay:.04s}.stagger.in > *:nth-child(2){transition-delay:.08s}.stagger.in > *:nth-child(3){transition-delay:.12s}.stagger.in > *:nth-child(4){transition-delay:.16s}.stagger.in > *:nth-child(5){transition-delay:.2s}.stagger.in > *:nth-child(6){transition-delay:.24s}.stagger.in > *:nth-child(7){transition-delay:.28s}.stagger.in > *:nth-child(8){transition-delay:.32s}
+  @media (prefers-reduced-motion: reduce){ .reveal,.stagger>*{ transition:none!important; opacity:1; transform:none; } .card:hover .card-plate{ transform:none; } }
+</style>
+</head>
+<body>
+
+<div class="announce-help">
+  Need Help? <a href="tel:1231231234">📞 123-123-1234</a>
+</div>
+<div class="announce-loud">
+  <div class="announce-loud-track">
+    <span class="loud-msg active"><span class="pulse"></span>Save 20% on Your 2nd Hat</span>
+    <span class="loud-msg"><span class="pulse"></span>Save 40% on the 3rd &amp; Every Hat After</span>
+    <span class="loud-msg"><span class="pulse"></span>Bundle 3 · Stack &amp; Save</span>
+    <span class="loud-msg"><span class="pulse"></span>Free Shipping Over $100</span>
+    <span class="loud-msg"><span class="pulse"></span>Discount Stacks Automatically at the Bag</span>
+  </div>
+</div>
+<div class="announce">
+  <div class="announce-track">
+    <span>Free Shipping Over $100</span><span class="dot">·</span>
+    <span>30-Day Returns</span><span class="dot">·</span>
+    <span>One Size Adjustable</span><span class="dot">·</span>
+    <span>Designed in the USA</span><span class="dot">·</span>
+    <span>Secure Checkout</span>
+  </div>
+</div>
+
+<header class="topbar">
+  <a href="#" class="wordmark"><span class="rivet"></span>Foundry</a>
+  <nav class="navlinks">
+    <a href="#wall">The Wall</a>
+    <a href="#story">Why Foundry</a>
+    <a href="#promise">The Promise</a>
+  </nav>
+  <button class="cart-btn" id="cartOpen" aria-label="Open bag">
+    <span>Bag</span>
+    <span class="cart-count empty" id="cartCount">0</span>
+  </button>
+</header>
+
+<!-- ─── HERO ─── -->
+<section class="hero">
+  <div class="hero-text">
+    <div class="hero-eyebrow">Trucker hats &amp; caps for everyone</div>
+    <h1 class="hero-h1">A good cap,<br><span class="pop">no fuss.</span></h1>
+    <p class="hero-sub">Fourteen hats on the wall. One size, adjustable. Pick one, pick three. The more you hang on the rack, the more comes off the price.</p>
+    <div class="hero-cta">
+      <a href="#wall" class="btn-solid">Shop the Wall</a>
+      <a href="#story" class="btn-ghost">How it works</a>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="n">14</div><div class="l">Caps</div></div>
+      <div class="hero-stat"><div class="n">1</div><div class="l">Size, adjustable</div></div>
+      <div class="hero-stat"><div class="n">$100</div><div class="l">Ships free over</div></div>
+    </div>
+  </div>
+  <div class="hero-image">
+    <!-- Photo by Nathan Dumlao on Unsplash: https://unsplash.com/photos/1521369909029-2afed882baee -->
+    <img src="images/lifestyle-1.jpg" alt="A distressed unstructured cap on a clean studio surface" loading="eager">
+  </div>
+</section>
+
+<!-- ─── THE WALL (pegboard grid) ─── -->
+<section class="section pegboard canvas-tex" id="wall">
+  <div class="section-head">
+    <div>
+      <p class="section-eyebrow">The Wall</p>
+      <h2 class="section-title">Fourteen on the rack.</h2>
+    </div>
+    <div class="section-meta">One Size · Adjustable · Tap a cap</div>
+  </div>
+  <div class="grid stagger" id="grid"><!-- cards via JS --></div>
+</section>
+
+<!-- ─── WHY FOUNDRY ─── -->
+<section class="band" id="story">
+  <div class="band-grid">
+    <div class="reveal">
+      <p class="band-eyebrow">Why Foundry</p>
+      <h2>We make caps.<br>That's the whole pitch.</h2>
+      <p>No drops, no waitlists, no story about a founder finding himself on a mountain. Just trucker hats and caps built to wear in: structured mesh-backs, distressed twill, foam fronts, snapbacks. <span class="pop">Every one is one size, adjustable</span>, so it fits whoever reaches for it.</p>
+      <p>Hang one on the rack and it's full price. Add a second and it comes down 20 percent. Add a third, and that one plus everything after is 40 percent off. The discount sorts itself out at the bag. No code to remember.</p>
+    </div>
+    <div class="band-image reveal">
+      <!-- Photo by Austin Wade on Unsplash: https://unsplash.com/photos/1488161628813-04466f872be2 -->
+      <img src="images/lifestyle-2.jpg" alt="A person wearing a cap outdoors in afternoon light" loading="lazy">
+    </div>
+  </div>
+</section>
+
+<!-- ─── THE PROMISE ─── -->
+<section class="promise" id="promise">
+  <div class="section-head">
+    <div>
+      <p class="section-eyebrow">The Promise</p>
+      <h2 class="section-title">Plain and sturdy.</h2>
+    </div>
+  </div>
+  <div class="promise-inner stagger">
+    <div class="promise-item">
+      <span class="pno">01 · Fit</span>
+      <h4>One size, adjustable</h4>
+      <p>Snapback or strap-and-buckle on the back of every cap. Loosen it, tighten it, hand it to a friend. It works on most heads, no sizing chart to squint at.</p>
+    </div>
+    <div class="promise-item">
+      <span class="pno">02 · Build</span>
+      <h4>Made to wear in</h4>
+      <p>Twill, foam, and mesh fronts, stitched to take a beating and look better for it. The ones that go soft and faded are doing exactly what they should.</p>
+    </div>
+    <div class="promise-item">
+      <span class="pno">03 · Care</span>
+      <h4>Cold water, air dry</h4>
+      <p>Spot-clean when you can, cold rinse when you must, air dry always. Skip the machine and the dryer and the cap keeps its shape for years.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FOOTER ─── -->
+<footer>
+  <div class="foot-grid">
+    <div>
+      <div class="foot-mark">Foundry</div>
+      <p class="foot-blurb">Trucker hats and caps for everyone. One size, adjustable. Free US shipping over $100.</p>
+    </div>
+    <div>
+      <p class="foot-h">Shop</p>
+      <ul class="foot-list">
+        <li><a href="#wall">The Wall</a></li>
+        <li><a href="#story">Why Foundry</a></li>
+        <li><a href="#promise">The Promise</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Help</p>
+      <ul class="foot-list">
+        <li><a href="shipping.html">Shipping</a></li>
+        <li><a href="returns.html">Returns</a></li>
+        <li><a href="mailto:help@foundry.com">Contact</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Legal</p>
+      <ul class="foot-list">
+        <li><a href="terms.html">Terms</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot-bottom">
+    <span>© <span id="year"></span> PLACEHOLDER LLC</span>
+    <span>123 Main Street · Placeholder, State 10101</span>
+  </div>
+</footer>
+
+<!-- ─── MODAL ─── -->
+<div class="modal-bg" id="modalBg"></div>
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-hidden="true">
+  <button class="modal-close" id="modalClose" aria-label="Close">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1L13 13M13 1L1 13" stroke="currentColor" stroke-width="1.6"/></svg>
+  </button>
+  <div class="modal-image"><img id="modalImg" alt=""></div>
+  <div class="modal-info">
+    <div class="modal-kind" id="modalKind"></div>
+    <h3 class="modal-name" id="modalName"></h3>
+    <div class="modal-price" id="modalPrice"></div>
+    <p class="modal-desc" id="modalDesc"></p>
+    <div class="modal-variant">Fit</div>
+    <span class="variant-chip"><span class="tick"></span>One Size · Adjustable</span>
+    <button class="modal-add" id="modalAdd">Add to Bag</button>
+  </div>
+</div>
+
+<!-- ─── CART DRAWER ─── -->
+<aside class="cart" id="cart" aria-hidden="true">
+  <div class="cart-header">
+    <h3 class="cart-title">Your Bag</h3>
+    <button class="cart-close" id="cartClose">Close</button>
+  </div>
+  <div class="cart-items" id="cartItems"></div>
+  <div class="cart-foot" id="cartFoot" hidden>
+    <div class="savings-line" id="savingsLine"></div>
+    <div class="total-line">
+      <span class="total-l">Subtotal</span>
+      <span class="total-v" id="cartTotal">$0</span>
+    </div>
+    <a href="checkout.html" class="cart-checkout">Checkout</a>
+    <p class="cart-hint">Bundle discount applied. Shipping and tax calculated at checkout.</p>
+  </div>
+</aside>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const PRODUCTS = [
+  { slug:'drifter',   num:'01', name:'Drifter',   price:24.99, kind:'Distressed Unstructured', desc:'A soft, washed twill cap with a low unstructured crown that sits broken-in from day one. Curved brim, adjustable strap back.' },
+  { slug:'ranger',    num:'02', name:'Ranger',    price:26.99, kind:'Embroidered Patch',       desc:'Structured front with a stitched embroidered patch and a mesh back for airflow. Snaps closed at the back, sits up tall.' },
+  { slug:'ember',     num:'03', name:'Ember',     price:28.99, kind:'Sublimation Print',       desc:'All-over sublimation print across the front panels, finished with a flat brim. Foam-front trucker build, adjustable snap back.' },
+  { slug:'classic',   num:'04', name:'Classic',   price:19.99, kind:'Retro Five-Panel',        desc:'A clean retro five-panel in plain canvas. No logos, no fuss, curved brim. The one you reach for without thinking.' },
+  { slug:'varsity',   num:'05', name:'Varsity',   price:24.99, kind:'Collegiate Patch',        desc:'Collegiate-style felt patch on a structured front, mesh back, flat brim. Snapback closure that holds its set.' },
+  { slug:'scout',     num:'06', name:'Scout',     price:21.99, kind:'Structured Mesh-Back',    desc:'Structured foam front with a breathable mesh back, built for warm days. Snaps adjust across a wide range.' },
+  { slug:'mesa',      num:'07', name:'Mesa',      price:22.99, kind:'Classic Mesh',            desc:'The plain classic trucker: solid twill front, mesh rear panels, flat brim. Snapback back, nothing extra.' },
+  { slug:'summit',    num:'08', name:'Summit',    price:23.99, kind:'Outdoor Performance',     desc:'A lightweight performance cap with a curved brim and a quick-dry sweatband. Adjustable strap back for the trail.' },
+  { slug:'heritage',  num:'09', name:'Heritage',  price:28.99, kind:'Snapback',                desc:'A structured six-panel snapback with a flat brim and a tall front. Wears in slow, holds its shape.' },
+  { slug:'standard',  num:'10', name:'Standard',  price:19.99, kind:'Snapback',                desc:'A plain structured snapback, flat brim, solid color. The blank canvas of the wall, priced to match.' },
+  { slug:'rugged',    num:'11', name:'Rugged',    price:32.99, kind:'Twill Mesh-Back Patch',   desc:'Heavier twill front with a stitched patch and mesh back. Built sturdy, snap closure, flat brim that breaks in over time.' },
+  { slug:'canvas',    num:'12', name:'Canvas',    price:26.99, kind:'Blank Foam',              desc:'A blank foam-front trucker with mesh rear and a flat brim. No graphics on purpose, snapback closure.' },
+  { slug:'charcoal',  num:'13', name:'Charcoal',  price:27.99, kind:'Classic Snapback',        desc:'A dark, structured classic snapback with a flat brim. Plain front, clean lines, adjustable snap back.' },
+  { slug:'trailhead', num:'14', name:'Trailhead', price:24.99, kind:'Camping Sublimation',     desc:'Outdoor sublimation print across the front, curved brim, mesh back. Adjustable strap closure for long days out.' },
+];
+
+const PRODUCTS_INDEX = Object.fromEntries(PRODUCTS.map(p => [p.slug, p]));
+const STORAGE_KEY = 'foundry_cart';
+
+function loadCart(){ try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; } }
+function saveCart(c){ localStorage.setItem(STORAGE_KEY, JSON.stringify(c)); }
+let cart = loadCart();
+
+// ─── Cart math: single-track hat bundle ───
+// rank units by price desc: 1st full, 2nd -20%, 3rd & every additional -40%
+function cartTotals(cart){
+  const units = [];
+  for (const line of cart){ for (let i=0;i<line.qty;i++) units.push(line.price); }
+  units.sort((a,b)=>b-a);
+  let total=0, discount=0;
+  for (let i=0;i<units.length;i++){
+    if (i===0) total += units[i];
+    else if (i===1){ total += units[i]*0.80; discount += units[i]*0.20; }
+    else { total += units[i]*0.60; discount += units[i]*0.40; }
+  }
+  const original = units.reduce((s,n)=>s+n,0);
+  return { total, discount, original, units: units.length };
+}
+const bundleSubtotal = cartTotals;
+
+function fmt(n){ return '$' + n.toFixed(2).replace(/\.00$/, ''); }
+
+// ─── Render grid ───
+function renderGrid(){
+  const grid = document.getElementById('grid');
+  grid.innerHTML = PRODUCTS.map(p => `
+    <article class="card" data-slug="${p.slug}">
+      <span class="hook"></span>
+      <div class="card-plate">
+        <div class="card-image">
+          <img src="images/${p.slug}.jpg" alt="${p.name} ${p.kind} cap" loading="lazy">
+          <div class="card-overlay"><button class="card-quick" type="button">Quick Add</button></div>
+        </div>
+        <div class="card-meta">
+          <div class="card-kind">${p.kind}</div>
+          <div class="card-row">
+            <h3 class="card-name">${p.name}</h3>
+            <div class="card-price">${fmt(p.price)}</div>
+          </div>
+        </div>
+      </div>
+    </article>
+  `).join('');
+  grid.querySelectorAll('.card').forEach(card => {
+    const quick = card.querySelector('.card-quick');
+    quick.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const p = PRODUCTS_INDEX[card.dataset.slug];
+      addToCart(p);
+      toast(`${p.name} added`);
+    });
+    card.addEventListener('click', () => openModal(card.dataset.slug));
+  });
+}
+
+// ─── Modal ───
+let modalProduct = null;
+function openModal(slug){
+  const p = PRODUCTS_INDEX[slug];
+  if (!p) return;
+  modalProduct = p;
+  document.getElementById('modalImg').src = `images/${p.slug}.jpg`;
+  document.getElementById('modalImg').alt = p.name;
+  document.getElementById('modalKind').textContent = `${p.kind} · No. ${p.num}`;
+  document.getElementById('modalName').textContent = p.name;
+  document.getElementById('modalPrice').textContent = fmt(p.price);
+  document.getElementById('modalDesc').textContent = p.desc;
+  document.getElementById('modalAdd').textContent = `Add ${p.name} to Bag`;
+  document.getElementById('modal').classList.add('open');
+  document.getElementById('modalBg').classList.add('open');
+  document.getElementById('modal').setAttribute('aria-hidden','false');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal(){
+  document.getElementById('modal').classList.remove('open');
+  document.getElementById('modalBg').classList.remove('open');
+  document.getElementById('modal').setAttribute('aria-hidden','true');
+  document.body.style.overflow = '';
+}
+document.getElementById('modalClose').addEventListener('click', closeModal);
+document.getElementById('modalBg').addEventListener('click', closeModal);
+document.addEventListener('keydown', e => { if (e.key === 'Escape'){ closeModal(); closeCart(); } });
+document.getElementById('modalAdd').addEventListener('click', () => {
+  if (!modalProduct) return;
+  addToCart(modalProduct);
+  closeModal();
+  toast(`${modalProduct.name} added`);
+});
+
+// ─── Cart ───
+function addToCart(p){
+  const existing = cart.find(l => l.slug === p.slug);
+  if (existing) existing.qty += 1;
+  else cart.push({ slug:p.slug, name:p.name, price:p.price, qty:1 });
+  saveCart(cart);
+  renderCart();
+  openCart();
+}
+function removeLine(slug){ cart = cart.filter(l => l.slug !== slug); saveCart(cart); renderCart(); }
+function changeQty(slug, d){
+  const line = cart.find(l => l.slug === slug);
+  if (!line) return;
+  line.qty = Math.max(0, line.qty + d);
+  if (line.qty === 0) cart = cart.filter(l => l.slug !== slug);
+  saveCart(cart); renderCart();
+}
+
+function renderCart(){
+  const items = document.getElementById('cartItems');
+  const foot = document.getElementById('cartFoot');
+  const count = cart.reduce((s,l)=>s+l.qty,0);
+  const cc = document.getElementById('cartCount');
+  cc.textContent = count;
+  cc.classList.toggle('empty', count === 0);
+
+  if (cart.length === 0){
+    items.innerHTML = `<div class="cart-empty"><p>Your bag is empty.</p><span>Grab one off the wall.</span></div>`;
+    foot.hidden = true;
+    return;
+  }
+
+  items.innerHTML = cart.map(l => {
+    const p = PRODUCTS_INDEX[l.slug];
+    return `
+    <div class="cart-line">
+      <div class="cart-line-img"><img src="images/${l.slug}.jpg" alt="${l.name}"></div>
+      <div class="cart-line-info">
+        <div class="cart-line-top">
+          <div>
+            <div class="cart-line-name">${l.name}</div>
+            <div class="cart-line-meta">${p ? p.kind : ''} · One Size</div>
+          </div>
+          <div class="cart-line-price">${fmt(l.price)}</div>
+        </div>
+        <div class="cart-line-bottom">
+          <div class="qty">
+            <button data-act="dec" data-slug="${l.slug}">−</button>
+            <span>${l.qty}</span>
+            <button data-act="inc" data-slug="${l.slug}">+</button>
+          </div>
+          <button class="cart-remove" data-act="rem" data-slug="${l.slug}">Remove</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  items.querySelectorAll('button[data-act]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const { act, slug } = btn.dataset;
+      if (act === 'inc') changeQty(slug, +1);
+      if (act === 'dec') changeQty(slug, -1);
+      if (act === 'rem') removeLine(slug);
+    });
+  });
+
+  const { total, discount, units } = cartTotals(cart);
+  const sav = document.getElementById('savingsLine');
+  if (discount > 0.001){
+    sav.innerHTML = `<div style="display:flex;justify-content:space-between"><span>Stack &amp; save (${units} hats)</span><span>−${fmt(discount)}</span></div>`;
+  } else if (units === 1){
+    sav.innerHTML = `<div style="display:flex;justify-content:space-between;color:var(--ink-soft);font-weight:500"><span>Add a 2nd hat for 20% off</span><span>•</span></div>`;
+  } else {
+    sav.innerHTML = '';
+  }
+  document.getElementById('cartTotal').textContent = fmt(total);
+  foot.hidden = false;
+}
+
+function openCart(){ document.getElementById('cart').classList.add('open'); document.getElementById('cart').setAttribute('aria-hidden','false'); }
+function closeCart(){ document.getElementById('cart').classList.remove('open'); document.getElementById('cart').setAttribute('aria-hidden','true'); }
+document.getElementById('cartOpen').addEventListener('click', openCart);
+document.getElementById('cartClose').addEventListener('click', closeCart);
+
+// ─── Toast ───
+let toastT;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastT);
+  toastT = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+// ─── Reveal ───
+const obs = new IntersectionObserver((entries)=>{
+  entries.forEach(e => { if (e.isIntersecting){ e.target.classList.add('in'); obs.unobserve(e.target); } });
+}, { threshold: 0.1, rootMargin: '0px 0px -60px 0px' });
+document.querySelectorAll('.reveal, .stagger').forEach(el => obs.observe(el));
+
+// ─── Loud banner rotation ───
+(function(){
+  const msgs = document.querySelectorAll('.loud-msg');
+  if (msgs.length < 2) return;
+  let i = 0;
+  setInterval(()=>{ msgs[i].classList.remove('active'); i = (i+1) % msgs.length; msgs[i].classList.add('active'); }, 3200);
+})();
+
+// ─── Init ───
+document.getElementById('year').textContent = new Date().getFullYear();
+renderGrid();
+renderCart();
+</script>
+
+</body>
+</html>
