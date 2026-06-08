@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checkout · Foundry</title>
+<meta name="description" content="Secure checkout for your Foundry bag.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #29405A;
+    --navy-deep: #1E3047;
+    --oat: #E4D8C4;
+    --oat-deep: #CDBFA6;
+    --cream: #F4EEE2;
+    --orange: #E8622A;
+    --orange-deep: #C84E1C;
+    --ink: #1A1916;
+    --ink-soft: rgba(26, 25, 22, 0.62);
+    --line: rgba(26, 25, 22, 0.18);
+    --line-soft: rgba(26, 25, 22, 0.09);
+    --error: #B23A26;
+    --display: 'Zilla Slab', Georgia, serif;
+    --body: 'Inter Tight', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--body); color: var(--ink); background: var(--cream); line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  img { display: block; max-width: 100%; }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  input, select { font: inherit; color: inherit; }
+
+  /* Announcement bars */
+  .announce-help { background: var(--cream); color: var(--ink); padding: 7px 16px; text-align: center; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; font-weight: 600; border-bottom: 1px solid var(--line-soft); }
+  .announce-help a { color: var(--navy); font-weight: 700; margin-left: 8px; letter-spacing: 0.14em; }
+  .announce-help a:hover { color: var(--orange); }
+  @media (max-width:700px){ .announce-help{ font-size:10px; padding:6px 12px; letter-spacing:0.14em; } }
+
+  .announce-loud { background: var(--orange); color: var(--cream); text-align: center; font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; font-weight: 700; overflow: hidden; position: relative; }
+  .announce-loud::before, .announce-loud::after { content:''; position:absolute; top:0; bottom:0; width:70px; z-index:2; pointer-events:none; }
+  .announce-loud::before { left:0; background: linear-gradient(to right, var(--orange), transparent); }
+  .announce-loud::after { right:0; background: linear-gradient(to left, var(--orange), transparent); }
+  .announce-loud-track { position: relative; height: 40px; }
+  .loud-msg { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; white-space:nowrap; opacity:0; transform:translateY(8px); transition: opacity .5s ease, transform .55s cubic-bezier(.2,.7,.2,1); padding:0 16px; }
+  .loud-msg.active { opacity:1; transform:translateY(0); }
+  .loud-msg .pulse { display:inline-block; width:6px; height:6px; border-radius:999px; background: var(--navy); margin-right:12px; vertical-align:middle; animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{ box-shadow:0 0 0 0 rgba(41,64,90,0.55);} 50%{ box-shadow:0 0 0 7px rgba(41,64,90,0);} }
+  @media (max-width:700px){ .announce-loud{ font-size:10.5px; letter-spacing:0.12em; } .announce-loud-track{ height:36px; } .loud-msg .pulse{ margin-right:8px; width:5px; height:5px; } .announce-loud::before,.announce-loud::after{ width:28px; } }
+
+  .announce { background: var(--ink); color: var(--oat); padding: 9px 16px; text-align: center; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 500; }
+  .announce-track { display:flex; justify-content:center; align-items:center; gap:14px; flex-wrap:wrap; }
+  .announce-track .dot { color: var(--orange); }
+  @media (max-width:700px){ .announce{ font-size:10px; padding:7px 12px; letter-spacing:0.1em; } .announce-track{ gap:9px; } }
+
+  /* Top bar */
+  .topbar { display:flex; align-items:center; justify-content:space-between; padding:16px clamp(18px,4vw,56px); border-bottom:1px solid var(--line); }
+  .wordmark { font-family: var(--display); font-weight:700; font-size:24px; letter-spacing:0.04em; text-transform:uppercase; display:flex; align-items:center; gap:10px; }
+  .wordmark .rivet { width:11px; height:11px; border-radius:999px; background: var(--orange); box-shadow: inset 0 0 0 2px rgba(0,0,0,0.18); }
+  .secure { display:flex; align-items:center; gap:8px; font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color: var(--ink-soft); font-weight:600; }
+  .secure svg { width:14px; height:14px; color: var(--navy); }
+
+  .steps { display:flex; gap:36px; padding:16px clamp(18px,4vw,56px); background: var(--oat); border-bottom:1px solid var(--line-soft); overflow-x:auto; }
+  .step { display:flex; align-items:center; gap:10px; font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color: var(--ink-soft); font-weight:600; white-space:nowrap; }
+  .step.active { color: var(--ink); }
+  .step-no { width:22px; height:22px; border-radius:4px; border:1px solid currentColor; display:flex; align-items:center; justify-content:center; font-size:10px; }
+  .step.active .step-no { background: var(--navy); color: var(--cream); border-color: var(--navy); }
+
+  .wrap { max-width:1200px; margin:0 auto; padding: clamp(28px,4vw,56px) clamp(18px,4vw,40px); display:grid; grid-template-columns: 1.15fr 0.85fr; gap: clamp(32px,5vw,72px); }
+  @media (max-width:880px){ .wrap{ grid-template-columns:1fr; gap:32px; } .summary-col{ order:-1; } }
+  .form-col, .summary-col { min-width:0; }
+  .page-title { font-family: var(--display); font-weight:700; font-size: clamp(40px,5vw,64px); line-height:0.95; margin-bottom:8px; }
+  .page-sub { font-size:13px; color: var(--ink-soft); margin-bottom:36px; letter-spacing:0.02em; }
+
+  .field-group { margin-bottom:36px; }
+  .field-h { font-family: var(--display); font-weight:600; font-size:24px; margin-bottom:6px; }
+  .field-help { font-size:12px; color: var(--ink-soft); margin-bottom:18px; }
+  .row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+  .row.thirds { grid-template-columns:1.5fr 1fr 1fr; }
+  .row.solo { grid-template-columns:1fr; }
+  .field { position:relative; }
+  .field input, .field select { width:100%; padding:16px 14px; border:1px solid var(--line); background: #FBF8F1; font-size:15px; border-radius:4px; transition: border-color .18s, box-shadow .18s; appearance:none; -webkit-appearance:none; }
+  .field select { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%231A1916' stroke-width='1.4' fill='none' stroke-linecap='round'/></svg>"); background-repeat:no-repeat; background-position: right 16px center; padding-right:40px; }
+  .field input:focus, .field select:focus { outline:none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(41,64,90,0.14); }
+  .field input::placeholder { color: rgba(26,25,22,0.42); }
+  .field.error input, .field.error select { border-color: var(--error); }
+  .field-error { display:none; font-size:11px; color: var(--error); margin-top:4px; letter-spacing:0.04em; }
+  .field.error .field-error { display:block; }
+  .field-label { display:block; font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color: var(--ink-soft); font-weight:600; margin-bottom:8px; }
+
+  .card-row { display:grid; grid-template-columns:1fr; gap:12px; }
+  .card-meta { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .card-icons { display:flex; gap:6px; position:absolute; right:14px; top:50%; transform:translateY(-50%); align-items:center; pointer-events:none; }
+  .card-icons span { font-size:9px; letter-spacing:0.06em; padding:3px 5px; background: var(--navy); color: var(--cream); border-radius:2px; font-weight:700; }
+
+  .promo { display:flex; gap:8px; padding:14px 0 6px; border-top:1px solid var(--line-soft); margin-top:16px; }
+  .promo input { flex:1; padding:12px 14px; border:1px solid var(--line); background:#FBF8F1; font-size:13px; border-radius:4px; text-transform:uppercase; letter-spacing:0.06em; }
+  .promo button { padding:0 18px; border:1px solid var(--ink); font-size:11px; letter-spacing:0.18em; text-transform:uppercase; font-weight:700; border-radius:4px; transition: all .18s; }
+  .promo button:hover { background: var(--ink); color: var(--cream); }
+  .promo-msg { font-size:11px; margin-top:6px; letter-spacing:0.04em; color: var(--navy); min-height:14px; font-weight:600; }
+  .promo-msg.error { color: var(--error); }
+
+  .pay-btn { width:100%; background: var(--orange); color: var(--cream); padding:22px; font-size:12px; letter-spacing:0.24em; text-transform:uppercase; font-weight:700; border-radius:4px; margin-top:24px; transition: background .2s; position:relative; }
+  .pay-btn:hover { background: var(--orange-deep); }
+  .pay-btn:disabled { background: var(--oat-deep); color: rgba(26,25,22,0.5); cursor:not-allowed; }
+  .pay-btn.loading { color: transparent; }
+  .pay-btn.loading::after { content:''; position:absolute; top:50%; left:50%; width:18px; height:18px; margin:-9px 0 0 -9px; border:2px solid var(--cream); border-right-color:transparent; border-radius:50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .pay-foot { text-align:center; font-size:11px; color: var(--ink-soft); margin-top:14px; letter-spacing:0.04em; }
+
+  .summary { background: var(--oat); padding: clamp(24px,3vw,36px); position:sticky; top:24px; border-radius:6px; }
+  .summary-h { font-family: var(--display); font-weight:700; font-size:22px; margin-bottom:18px; padding-bottom:16px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:baseline; }
+  .summary-h span:last-child { font-family: var(--body); font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color: var(--ink-soft); font-weight:600; }
+  .summary-line { display:grid; grid-template-columns:64px 1fr auto; gap:14px; padding:14px 0; border-bottom:1px solid var(--line-soft); }
+  .summary-line:last-of-type { border-bottom:0; padding-bottom:4px; }
+  .summary-line-img { width:64px; height:64px; overflow:hidden; border-radius:4px; background:#fff; position:relative; }
+  .summary-line-img img { width:100%; height:100%; object-fit:cover; mix-blend-mode: multiply; }
+  .summary-line-img .qty-bubble { position:absolute; top:-7px; right:-7px; width:20px; height:20px; border-radius:999px; background: var(--navy); color: var(--cream); font-size:10px; display:flex; align-items:center; justify-content:center; font-weight:700; }
+  .summary-line-info { display:flex; flex-direction:column; justify-content:center; gap:2px; }
+  .summary-line-name { font-family: var(--display); font-weight:600; font-size:17px; line-height:1.1; }
+  .summary-line-meta { font-size:11px; color: var(--ink-soft); letter-spacing:0.04em; }
+  .summary-line-price { font-size:13px; font-weight:700; align-self:center; }
+  .summary-totals { margin-top:16px; padding-top:16px; border-top:1px solid var(--line); }
+  .summary-row { display:flex; justify-content:space-between; padding:6px 0; font-size:13px; }
+  .summary-row.muted { color: var(--ink-soft); }
+  .summary-row.savings { color: var(--navy); font-weight:700; }
+  .summary-row.total { margin-top:12px; padding-top:12px; border-top:1px solid var(--line); align-items:baseline; }
+  .summary-row.total .label { font-size:11px; letter-spacing:0.24em; text-transform:uppercase; color: var(--ink-soft); font-weight:600; }
+  .summary-row.total .value { font-family: var(--display); font-weight:700; font-size:32px; }
+
+  .summary-empty { text-align:center; padding:40px 0; color: var(--ink-soft); }
+  .summary-empty p { font-family: var(--display); font-weight:600; font-size:22px; color: var(--ink); margin-bottom:6px; }
+  .summary-empty a { display:inline-block; margin-top:18px; padding:12px 24px; border:1px solid var(--ink); font-size:11px; letter-spacing:0.18em; text-transform:uppercase; font-weight:700; border-radius:3px; }
+  .summary-empty a:hover { background: var(--ink); color: var(--cream); }
+
+  .success { display:none; text-align:center; padding: clamp(60px,10vw,120px) 24px; max-width:640px; margin:0 auto; }
+  .success.show { display:block; }
+  .success-mark { width:64px; height:64px; border-radius:999px; background: var(--navy); color: var(--cream); display:flex; align-items:center; justify-content:center; margin:0 auto 28px; font-size:28px; }
+  .success h1 { font-family: var(--display); font-weight:700; font-size: clamp(36px,5vw,56px); line-height:1; margin-bottom:16px; }
+  .success p { font-size:15px; color: var(--ink-soft); line-height:1.7; margin-bottom:8px; }
+  .success-order { display:inline-block; margin-top:20px; padding:12px 22px; background: var(--oat); font-size:11px; letter-spacing:0.18em; text-transform:uppercase; font-weight:700; border-radius:4px; }
+  .success-back { display:inline-block; margin-top:32px; padding:14px 28px; border:1px solid var(--ink); font-size:11px; letter-spacing:0.18em; text-transform:uppercase; font-weight:700; border-radius:3px; }
+  .success-back:hover { background: var(--ink); color: var(--cream); }
+
+  .ck-foot { padding:24px clamp(18px,4vw,40px); border-top:1px solid var(--line-soft); text-align:center; font-size:11px; color: var(--ink-soft); letter-spacing:0.04em; }
+  .ck-foot a { text-decoration:underline; text-underline-offset:3px; }
+  .ck-foot a + a { margin-left:14px; }
+</style>
+</head>
+<body>
+
+<div class="announce-help">
+  Need Help? <a href="tel:1231231234">📞 123-123-1234</a>
+</div>
+<div class="announce-loud">
+  <div class="announce-loud-track">
+    <span class="loud-msg active"><span class="pulse"></span>Save 20% on Your 2nd Hat</span>
+    <span class="loud-msg"><span class="pulse"></span>Save 40% on the 3rd &amp; Every Hat After</span>
+    <span class="loud-msg"><span class="pulse"></span>Bundle 3 · Stack &amp; Save</span>
+    <span class="loud-msg"><span class="pulse"></span>Free Shipping Over $100</span>
+    <span class="loud-msg"><span class="pulse"></span>Discount Stacks Automatically at the Bag</span>
+  </div>
+</div>
+<div class="announce">
+  <div class="announce-track">
+    <span>Free Shipping Over $100</span><span class="dot">·</span>
+    <span>30-Day Returns</span><span class="dot">·</span>
+    <span>One Size Adjustable</span><span class="dot">·</span>
+    <span>Designed in the USA</span><span class="dot">·</span>
+    <span>Secure Checkout</span>
+  </div>
+</div>
+
+<header class="topbar">
+  <a href="index.html" class="wordmark"><span class="rivet"></span>Foundry</a>
+  <span class="secure">
+    <svg viewBox="0 0 16 16" fill="none"><path d="M3 7V5a5 5 0 0110 0v2M3 7h10v7H3V7z" stroke="currentColor" stroke-width="1.4"/></svg>
+    Secure Checkout
+  </span>
+</header>
+
+<nav class="steps">
+  <div class="step active"><span class="step-no">1</span><span>Bag</span></div>
+  <div class="step active"><span class="step-no">2</span><span>Contact &amp; Shipping</span></div>
+  <div class="step active"><span class="step-no">3</span><span>Payment</span></div>
+</nav>
+
+<main id="checkoutMain" class="wrap">
+
+  <section class="form-col">
+    <h1 class="page-title">Checkout</h1>
+    <p class="page-sub">Free standard shipping on orders over $100. $7.99 below.</p>
+
+    <form id="orderForm" novalidate>
+
+      <div class="field-group">
+        <h2 class="field-h">Contact</h2>
+        <p class="field-help">Order updates and tracking will be sent here.</p>
+        <div class="row solo">
+          <div class="field">
+            <label class="field-label" for="email">Email</label>
+            <input id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
+            <div class="field-error">Enter a valid email address.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <h2 class="field-h">Shipping</h2>
+        <p class="field-help">United States only · 4–7 business days.</p>
+        <div class="row">
+          <div class="field">
+            <label class="field-label" for="firstName">First Name</label>
+            <input id="firstName" name="firstName" type="text" autocomplete="given-name" required>
+            <div class="field-error">Required.</div>
+          </div>
+          <div class="field">
+            <label class="field-label" for="lastName">Last Name</label>
+            <input id="lastName" name="lastName" type="text" autocomplete="family-name" required>
+            <div class="field-error">Required.</div>
+          </div>
+        </div>
+        <div class="row solo">
+          <div class="field">
+            <label class="field-label" for="address1">Address</label>
+            <input id="address1" name="address1" type="text" autocomplete="address-line1" required>
+            <div class="field-error">Required.</div>
+          </div>
+        </div>
+        <div class="row solo">
+          <div class="field">
+            <label class="field-label" for="address2">Apartment, Suite, etc. (optional)</label>
+            <input id="address2" name="address2" type="text" autocomplete="address-line2">
+          </div>
+        </div>
+        <div class="row thirds">
+          <div class="field">
+            <label class="field-label" for="city">City</label>
+            <input id="city" name="city" type="text" autocomplete="address-level2" required>
+            <div class="field-error">Required.</div>
+          </div>
+          <div class="field">
+            <label class="field-label" for="state">State</label>
+            <select id="state" name="state" autocomplete="address-level1" required>
+              <option value="">Select</option>
+              <option>AL</option><option>AK</option><option>AZ</option><option>AR</option><option>CA</option>
+              <option>CO</option><option>CT</option><option>DE</option><option>FL</option><option>GA</option>
+              <option>HI</option><option>ID</option><option>IL</option><option>IN</option><option>IA</option>
+              <option>KS</option><option>KY</option><option>LA</option><option>ME</option><option>MD</option>
+              <option>MA</option><option>MI</option><option>MN</option><option>MS</option><option>MO</option>
+              <option>MT</option><option>NE</option><option>NV</option><option>NH</option><option>NJ</option>
+              <option>NM</option><option>NY</option><option>NC</option><option>ND</option><option>OH</option>
+              <option>OK</option><option>OR</option><option>PA</option><option>RI</option><option>SC</option>
+              <option>SD</option><option>TN</option><option>TX</option><option>UT</option><option>VT</option>
+              <option>VA</option><option>WA</option><option>WV</option><option>WI</option><option>WY</option>
+              <option>DC</option>
+            </select>
+            <div class="field-error">Required.</div>
+          </div>
+          <div class="field">
+            <label class="field-label" for="zip">ZIP</label>
+            <input id="zip" name="zip" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="10" required>
+            <div class="field-error">Enter a valid ZIP.</div>
+          </div>
+        </div>
+        <div class="row solo">
+          <div class="field">
+            <label class="field-label" for="phone">Phone (optional)</label>
+            <input id="phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="For delivery updates">
+          </div>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <h2 class="field-h">Payment</h2>
+        <p class="field-help">All transactions are encrypted. We never store your full card number.</p>
+        <div class="card-row">
+          <div class="field">
+            <label class="field-label" for="cardNumber">Card Number</label>
+            <input id="cardNumber" name="cardNumber" type="text" inputmode="numeric" autocomplete="cc-number" placeholder="•••• •••• •••• ••••" maxlength="23" required>
+            <div class="field-error">Enter a valid card number.</div>
+            <div class="card-icons"><span id="cardBrand"></span></div>
+          </div>
+          <div class="card-meta">
+            <div class="field">
+              <label class="field-label" for="cardExpiry">Expiry</label>
+              <input id="cardExpiry" name="cardExpiry" type="text" inputmode="numeric" autocomplete="cc-exp" placeholder="MM / YY" maxlength="7" required>
+              <div class="field-error">MM / YY</div>
+            </div>
+            <div class="field">
+              <label class="field-label" for="cardCvc">CVC</label>
+              <input id="cardCvc" name="cardCvc" type="text" inputmode="numeric" autocomplete="cc-csc" placeholder="•••" maxlength="4" required>
+              <div class="field-error">3–4 digits</div>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label" for="cardName">Name on Card</label>
+            <input id="cardName" name="cardName" type="text" autocomplete="cc-name" required>
+            <div class="field-error">Required.</div>
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="pay-btn" id="payBtn" disabled>Pay <span id="payAmt">$0</span></button>
+      <p class="pay-foot">By placing this order you agree to our <a href="terms.html">Terms</a> and <a href="privacy.html">Privacy Policy</a>.</p>
+    </form>
+  </section>
+
+  <aside class="summary-col">
+    <div class="summary">
+      <h2 class="summary-h"><span>Your Bag</span><span id="summaryCount">0 hats</span></h2>
+      <div id="summaryItems"></div>
+      <div id="summaryTotals" class="summary-totals" hidden>
+        <div class="summary-row muted"><span>Subtotal</span><span id="rowSubtotal">$0</span></div>
+        <div class="summary-row savings" id="savingsRow" hidden><span id="savingsLabel">Stack &amp; save</span><span id="rowSavings">−$0</span></div>
+        <div class="summary-row muted" id="promoRow" hidden><span id="promoLabel">Promo</span><span id="rowPromo">−$0</span></div>
+        <div class="summary-row muted"><span id="shipLabel">Shipping</span><span id="rowShipping">Free</span></div>
+        <div class="summary-row total"><span class="label">Total</span><span class="value" id="rowTotal">$0</span></div>
+      </div>
+      <div class="promo" id="promoBlock" hidden>
+        <input id="promoInput" type="text" placeholder="Promo code">
+        <button type="button" id="promoApply">Apply</button>
+      </div>
+      <div class="promo-msg" id="promoMsg"></div>
+    </div>
+  </aside>
+
+</main>
+
+<section id="successScreen" class="success">
+  <div class="success-mark">✓</div>
+  <h1>You're set.</h1>
+  <p id="successName">Your Foundry order is on its way.</p>
+  <p id="successEmail"></p>
+  <div class="success-order" id="successOrderId"></div>
+  <br><br>
+  <a href="index.html" class="success-back">Back to the Wall</a>
+</section>
+
+<footer class="ck-foot">
+  © <span id="year"></span> PLACEHOLDER LLC ·
+  <a href="terms.html">Terms</a>
+  <a href="privacy.html">Privacy</a>
+  <a href="returns.html">Returns</a>
+  <a href="shipping.html">Shipping</a>
+</footer>
+
+<script>
+const STORAGE_KEY = 'foundry_cart';
+const PRODUCTS_INDEX = {};
+
+const PRODUCTS = [
+  { slug:'drifter',   name:'Drifter',   price:24.99, kind:'Distressed Unstructured' },
+  { slug:'ranger',    name:'Ranger',    price:26.99, kind:'Embroidered Patch' },
+  { slug:'ember',     name:'Ember',     price:28.99, kind:'Sublimation Print' },
+  { slug:'classic',   name:'Classic',   price:19.99, kind:'Retro Five-Panel' },
+  { slug:'varsity',   name:'Varsity',   price:24.99, kind:'Collegiate Patch' },
+  { slug:'scout',     name:'Scout',     price:21.99, kind:'Structured Mesh-Back' },
+  { slug:'mesa',      name:'Mesa',      price:22.99, kind:'Classic Mesh' },
+  { slug:'summit',    name:'Summit',    price:23.99, kind:'Outdoor Performance' },
+  { slug:'heritage',  name:'Heritage',  price:28.99, kind:'Snapback' },
+  { slug:'standard',  name:'Standard',  price:19.99, kind:'Snapback' },
+  { slug:'rugged',    name:'Rugged',    price:32.99, kind:'Twill Mesh-Back Patch' },
+  { slug:'canvas',    name:'Canvas',    price:26.99, kind:'Blank Foam' },
+  { slug:'charcoal',  name:'Charcoal',  price:27.99, kind:'Classic Snapback' },
+  { slug:'trailhead', name:'Trailhead', price:24.99, kind:'Camping Sublimation' },
+];
+PRODUCTS.forEach(p => PRODUCTS_INDEX[p.slug] = p);
+
+const PROMOS = {
+  'FOU10': { type: 'pct', value: 10, label: '10% off' },
+  'WELCOME': { type: 'flat', value: 8, label: '$8 off' },
+};
+
+const SHIPPING_THRESHOLD = 100;
+const SHIPPING_FEE = 7.99;
+
+const WEBHOOK_URL = '';
+
+let activePromo = null;
+
+function loadCart(){ try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; } }
+function saveCart(c){ localStorage.setItem(STORAGE_KEY, JSON.stringify(c)); }
+let cart = loadCart();
+
+// ─── Cart math: single-track hat bundle (1st full / 2nd -20% / 3rd+ -40%) ───
+function bundleSubtotal(c){
+  const units = [];
+  for (const line of c){ for (let i=0;i<line.qty;i++) units.push(line.price); }
+  units.sort((a,b)=>b-a);
+  let total=0, discount=0;
+  for (let i=0;i<units.length;i++){
+    if (i===0) total += units[i];
+    else if (i===1){ total += units[i]*0.80; discount += units[i]*0.20; }
+    else { total += units[i]*0.60; discount += units[i]*0.40; }
+  }
+  const original = units.reduce((s,n)=>s+n,0);
+  return { total, discount, original, units: units.length };
+}
+function fmt(n){ return '$' + n.toFixed(2).replace(/\.00$/, ''); }
+
+function renderSummary(){
+  const items = document.getElementById('summaryItems');
+  const totals = document.getElementById('summaryTotals');
+  const promoBlock = document.getElementById('promoBlock');
+  const count = cart.reduce((s,l)=>s+l.qty,0);
+  document.getElementById('summaryCount').textContent = count + (count === 1 ? ' hat' : ' hats');
+
+  if (cart.length === 0){
+    items.innerHTML = `<div class="summary-empty"><p>Your bag is empty.</p><span>Grab one off the wall.</span><br><a href="index.html">Back to the Wall</a></div>`;
+    totals.hidden = true;
+    promoBlock.hidden = true;
+    document.getElementById('payBtn').disabled = true;
+    document.getElementById('payAmt').textContent = '$0';
+    return;
+  }
+
+  items.innerHTML = cart.map(l => {
+    const p = PRODUCTS_INDEX[l.slug];
+    const meta = (p ? p.kind : '') + ' · One Size';
+    return `
+    <div class="summary-line">
+      <div class="summary-line-img">
+        <img src="images/${l.slug}.jpg" alt="${l.name}">
+        ${l.qty > 1 ? `<span class="qty-bubble">${l.qty}</span>` : ''}
+      </div>
+      <div class="summary-line-info">
+        <div class="summary-line-name">${l.name}</div>
+        <div class="summary-line-meta">${meta}${l.qty > 1 ? ` · Qty ${l.qty}` : ''}</div>
+      </div>
+      <div class="summary-line-price">${fmt(l.price * l.qty)}</div>
+    </div>`;
+  }).join('');
+
+  const { total, discount, original, units } = bundleSubtotal(cart);
+  document.getElementById('rowSubtotal').textContent = fmt(original);
+  const savRow = document.getElementById('savingsRow');
+  if (discount > 0.001){
+    savRow.hidden = false;
+    document.getElementById('savingsLabel').textContent = `Stack & save (${units} hats)`;
+    document.getElementById('rowSavings').textContent = '−' + fmt(discount);
+  } else {
+    savRow.hidden = true;
+  }
+
+  let final = total;
+  let promoDelta = 0;
+  if (activePromo){
+    promoDelta = activePromo.type === 'pct' ? final * (activePromo.value / 100) : Math.min(final, activePromo.value);
+    final -= promoDelta;
+    document.getElementById('promoRow').hidden = false;
+    document.getElementById('promoLabel').textContent = `Promo · ${activePromo.code}`;
+    document.getElementById('rowPromo').textContent = '−' + fmt(promoDelta);
+  } else {
+    document.getElementById('promoRow').hidden = true;
+  }
+
+  const shipping = final >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+  const shipEl = document.getElementById('rowShipping');
+  if (shipping === 0){
+    shipEl.textContent = 'Free';
+  } else {
+    const toFree = (SHIPPING_THRESHOLD - final).toFixed(2);
+    shipEl.innerHTML = fmt(shipping) + ` <span style="color:var(--navy);font-size:11px;letter-spacing:0.04em;">· $${toFree} more for free</span>`;
+  }
+  final += shipping;
+
+  document.getElementById('rowTotal').textContent = fmt(final);
+  document.getElementById('payAmt').textContent = fmt(final);
+  totals.hidden = false;
+  promoBlock.hidden = false;
+  validateForm();
+}
+
+document.getElementById('promoApply').addEventListener('click', () => {
+  const input = document.getElementById('promoInput');
+  const code = input.value.trim().toUpperCase();
+  const msg = document.getElementById('promoMsg');
+  if (!code) return;
+  if (PROMOS[code]){
+    activePromo = { ...PROMOS[code], code };
+    msg.textContent = `Applied · ${activePromo.label}`;
+    msg.classList.remove('error');
+    input.value = '';
+    renderSummary();
+  } else {
+    msg.textContent = 'Code not recognised.';
+    msg.classList.add('error');
+  }
+});
+
+const cardNumberEl = document.getElementById('cardNumber');
+cardNumberEl.addEventListener('input', () => {
+  let v = cardNumberEl.value.replace(/\D/g, '').slice(0, 19);
+  cardNumberEl.value = v.replace(/(.{4})/g, '$1 ').trim();
+  detectBrand(v);
+  validateForm();
+});
+function detectBrand(num){
+  const b = document.getElementById('cardBrand');
+  if (/^4/.test(num)) b.textContent = 'VISA';
+  else if (/^5[1-5]/.test(num) || /^2[2-7]/.test(num)) b.textContent = 'MC';
+  else if (/^3[47]/.test(num)) b.textContent = 'AMEX';
+  else if (/^6/.test(num)) b.textContent = 'DISC';
+  else b.textContent = '';
+}
+
+const cardExpiryEl = document.getElementById('cardExpiry');
+cardExpiryEl.addEventListener('input', () => {
+  let v = cardExpiryEl.value.replace(/\D/g, '').slice(0, 4);
+  if (v.length >= 3) v = v.slice(0, 2) + ' / ' + v.slice(2);
+  cardExpiryEl.value = v;
+  validateForm();
+});
+
+const cardCvcEl = document.getElementById('cardCvc');
+cardCvcEl.addEventListener('input', () => { cardCvcEl.value = cardCvcEl.value.replace(/\D/g, '').slice(0, 4); validateForm(); });
+
+const zipEl = document.getElementById('zip');
+zipEl.addEventListener('input', () => { zipEl.value = zipEl.value.replace(/[^\d-]/g, '').slice(0, 10); });
+
+function isValidEmail(s){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
+function luhn(num){
+  num = num.replace(/\D/g, '');
+  if (num.length < 13) return false;
+  let s = 0, alt = false;
+  for (let i = num.length - 1; i >= 0; i--){
+    let d = +num[i];
+    if (alt){ d *= 2; if (d > 9) d -= 9; }
+    s += d; alt = !alt;
+  }
+  return s % 10 === 0;
+}
+function isValidExpiry(s){
+  const m = s.match(/^(\d{2})\s*\/?\s*(\d{2})$/);
+  if (!m) return false;
+  const month = +m[1], year = 2000 + (+m[2]);
+  if (month < 1 || month > 12) return false;
+  const now = new Date();
+  const exp = new Date(year, month, 0, 23, 59, 59);
+  return exp >= now;
+}
+
+function setError(id, hasError){ document.getElementById(id).closest('.field').classList.toggle('error', hasError); }
+
+function validateForm(){
+  const fields = {
+    email: isValidEmail(document.getElementById('email').value),
+    firstName: document.getElementById('firstName').value.trim().length > 0,
+    lastName: document.getElementById('lastName').value.trim().length > 0,
+    address1: document.getElementById('address1').value.trim().length > 0,
+    city: document.getElementById('city').value.trim().length > 0,
+    state: document.getElementById('state').value.length > 0,
+    zip: /^\d{5}(-\d{4})?$/.test(document.getElementById('zip').value),
+    cardNumber: luhn(document.getElementById('cardNumber').value),
+    cardExpiry: isValidExpiry(document.getElementById('cardExpiry').value),
+    cardCvc: document.getElementById('cardCvc').value.length >= 3,
+    cardName: document.getElementById('cardName').value.trim().length > 0,
+  };
+  const allValid = Object.values(fields).every(Boolean) && cart.length > 0;
+  document.getElementById('payBtn').disabled = !allValid;
+  return { fields, allValid };
+}
+
+document.querySelectorAll('#orderForm input, #orderForm select').forEach(el => {
+  el.addEventListener('input', validateForm);
+  el.addEventListener('blur', () => {
+    const { fields } = validateForm();
+    const id = el.id;
+    if (id in fields) setError(id, !fields[id]);
+  });
+});
+
+document.getElementById('orderForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const { fields, allValid } = validateForm();
+  if (!allValid){
+    Object.entries(fields).forEach(([id, ok]) => setError(id, !ok));
+    return;
+  }
+
+  const btn = document.getElementById('payBtn');
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  const totals = bundleSubtotal(cart);
+  let final = totals.total;
+  let promoDelta = 0;
+  if (activePromo){
+    promoDelta = activePromo.type === 'pct' ? final * (activePromo.value / 100) : Math.min(final, activePromo.value);
+    final -= promoDelta;
+  }
+  const shippingFee = final >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+  final += shippingFee;
+
+  const orderId = 'FOU-' + Math.floor(100000 + Math.random() * 900000);
+  const payload = {
+    order_id: orderId,
+    email: document.getElementById('email').value,
+    customer: {
+      first_name: document.getElementById('firstName').value,
+      last_name: document.getElementById('lastName').value,
+      phone: document.getElementById('phone').value,
+    },
+    shipping: {
+      address1: document.getElementById('address1').value,
+      address2: document.getElementById('address2').value,
+      city: document.getElementById('city').value,
+      state: document.getElementById('state').value,
+      zip: document.getElementById('zip').value,
+      country: 'US',
+    },
+    payment: {
+      last4: document.getElementById('cardNumber').value.replace(/\D/g, '').slice(-4),
+      brand: document.getElementById('cardBrand').textContent || 'CARD',
+    },
+    cart,
+    totals: {
+      original: totals.original,
+      bundle_discount: totals.discount,
+      promo_code: activePromo ? activePromo.code : null,
+      promo_discount: promoDelta,
+      shipping: shippingFee,
+      total: final,
+    },
+    placed_at: new Date().toISOString(),
+  };
+
+  try {
+    if (WEBHOOK_URL){
+      await fetch(WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    } else {
+      await new Promise(r => setTimeout(r, 1100));
+    }
+  } catch (err) {
+    console.warn('Webhook failed (continuing to success):', err);
+  }
+
+  document.getElementById('checkoutMain').style.display = 'none';
+  document.querySelector('.steps').style.display = 'none';
+  const success = document.getElementById('successScreen');
+  document.getElementById('successName').textContent = `Thanks, ${payload.customer.first_name}. Your Foundry order is on its way.`;
+  document.getElementById('successEmail').textContent = `A confirmation has been sent to ${payload.email}. Tracking arrives within 1 business day.`;
+  document.getElementById('successOrderId').textContent = `Order · ${orderId}`;
+  success.classList.add('show');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  localStorage.removeItem(STORAGE_KEY);
+});
+
+(function(){
+  const msgs = document.querySelectorAll('.loud-msg');
+  if (msgs.length < 2) return;
+  let i = 0;
+  setInterval(()=>{ msgs[i].classList.remove('active'); i = (i+1) % msgs.length; msgs[i].classList.add('active'); }, 3200);
+})();
+
+document.getElementById('year').textContent = new Date().getFullYear();
+renderSummary();
+</script>
+
+</body>
+</html>
