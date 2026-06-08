@@ -319,6 +319,19 @@
     padding: 11px 18px; font-size:12px; font-weight:600; letter-spacing:0.04em; border-radius:3px; margin-bottom:26px;
   }
   .variant-chip .tick { width:7px; height:7px; border-radius:999px; background: var(--orange); }
+  .tier-list { display:flex; flex-direction:column; gap:10px; margin-bottom:22px; }
+  .tier-opt { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:13px 16px; border:1px solid var(--line); border-radius:4px; background:#FBF8F1; cursor:pointer; transition: border-color .18s, box-shadow .18s; }
+  .tier-opt:hover { border-color: var(--navy); }
+  .tier-opt.sel { border-color: var(--navy); box-shadow: inset 0 0 0 1px var(--navy); }
+  .tier-opt .tier-name { font-weight:600; font-size:14px; letter-spacing:0.02em; }
+  .tier-opt .tier-price { font-weight:700; font-size:14px; }
+  .tier-opt .tier-dot { width:14px; height:14px; border-radius:999px; border:1px solid var(--line); flex:0 0 auto; position:relative; }
+  .tier-opt.sel .tier-dot { border-color: var(--navy); }
+  .tier-opt.sel .tier-dot::after { content:''; position:absolute; inset:3px; border-radius:999px; background: var(--orange); }
+  .tier-left { display:flex; align-items:center; gap:12px; }
+  .modal-ingredients { font-size:13px; line-height:1.6; color: var(--ink-soft); margin-bottom:16px; }
+  .modal-ingredients strong { color: var(--ink); font-weight:600; letter-spacing:0.04em; }
+  .modal-disclaimer { font-size:10.5px; line-height:1.5; color: var(--ink-soft); margin-top:16px; padding-top:14px; border-top:1px solid var(--line-soft); font-style:italic; }
   .modal-add { background: var(--orange); color: var(--cream); padding:17px; font-size:12px; letter-spacing:0.2em; text-transform:uppercase; font-weight:700; margin-top:auto; border-radius:3px; transition: background .2s; }
   .modal-add:hover { background: var(--orange-deep); }
   .modal-close { position:absolute; top:12px; right:12px; width:36px; height:36px; border-radius:999px; background: var(--cream); display:flex; align-items:center; justify-content:center; z-index:2; box-shadow: 0 2px 12px rgba(26,25,22,0.2); transition: transform .2s; }
@@ -521,6 +534,7 @@
     <span>© <span id="year"></span> PLACEHOLDER LLC</span>
     <span>123 Main Street · Placeholder, State 10101</span>
   </div>
+  <p style="max-width:1280px;margin:18px auto 0;font-size:10.5px;line-height:1.5;color:rgba(228,216,196,0.4);letter-spacing:0.02em;">These statements have not been evaluated by the FDA. This product is not intended to diagnose, treat, cure, or prevent any disease.</p>
 </footer>
 
 <!-- ─── MODAL ─── -->
@@ -535,9 +549,17 @@
     <h3 class="modal-name" id="modalName"></h3>
     <div class="modal-price" id="modalPrice"></div>
     <p class="modal-desc" id="modalDesc"></p>
-    <div class="modal-variant">Fit</div>
-    <span class="variant-chip"><span class="tick"></span>One Size · Adjustable</span>
+    <div id="modalHatFit">
+      <div class="modal-variant">Fit</div>
+      <span class="variant-chip"><span class="tick"></span>One Size · Adjustable</span>
+    </div>
+    <div id="modalTierWrap" hidden>
+      <div class="modal-variant">Choose your supply</div>
+      <div class="tier-list" id="modalTiers"></div>
+      <p class="modal-ingredients" id="modalIngredients"></p>
+    </div>
     <button class="modal-add" id="modalAdd">Add to Bag</button>
+    <p class="modal-disclaimer" id="modalDisclaimer" hidden></p>
   </div>
 </div>
 
@@ -565,21 +587,38 @@
 const PRODUCTS = [
   { slug:'drifter',   num:'01', name:'Drifter',   price:24.99, kind:'Distressed Unstructured', desc:'A soft, washed twill cap with a low unstructured crown that sits broken-in from day one. Curved brim, adjustable strap back.' },
   { slug:'ranger',    num:'02', name:'Ranger',    price:26.99, kind:'Embroidered Patch',       desc:'Structured front with a stitched embroidered patch and a mesh back for airflow. Snaps closed at the back, sits up tall.' },
-  { slug:'ember',     num:'03', name:'Ember',     price:28.99, kind:'Sublimation Print',       desc:'All-over sublimation print across the front panels, finished with a flat brim. Foam-front trucker build, adjustable snap back.' },
-  { slug:'classic',   num:'04', name:'Classic',   price:19.99, kind:'Retro Five-Panel',        desc:'A clean retro five-panel in plain canvas. No logos, no fuss, curved brim. The one you reach for without thinking.' },
+  { slug:'ember',     num:'03', name:'Ember',     price:28.99, kind:'Grey Canvas Mesh-Back',   desc:'A grey canvas front with a mesh back and a small woven label. Curved brim, adjustable snap closure.' },
+  { slug:'classic',   num:'04', name:'Classic',   price:19.99, kind:'Black Fitted Twill',      desc:'A plain black twill cap with a fitted crown and a curved brim. No logos, no fuss, the one you reach for without thinking.' },
   { slug:'varsity',   num:'05', name:'Varsity',   price:24.99, kind:'Collegiate Patch',        desc:'Collegiate-style felt patch on a structured front, mesh back, flat brim. Snapback closure that holds its set.' },
-  { slug:'scout',     num:'06', name:'Scout',     price:21.99, kind:'Structured Mesh-Back',    desc:'Structured foam front with a breathable mesh back, built for warm days. Snaps adjust across a wide range.' },
-  { slug:'mesa',      num:'07', name:'Mesa',      price:22.99, kind:'Classic Mesh',            desc:'The plain classic trucker: solid twill front, mesh rear panels, flat brim. Snapback back, nothing extra.' },
-  { slug:'summit',    num:'08', name:'Summit',    price:23.99, kind:'Outdoor Performance',     desc:'A lightweight performance cap with a curved brim and a quick-dry sweatband. Adjustable strap back for the trail.' },
+  { slug:'scout',     num:'06', name:'Scout',     price:21.99, kind:'Charcoal Flag Cap',       desc:'A charcoal cap with a subtle tonal flag detail and no brand logo. Structured front, adjustable back.' },
+  { slug:'mesa',      num:'07', name:'Mesa',      price:22.99, kind:'Camo-Brim Embroidered',   desc:'A cream cap with a camo-pattern brim and Country Club embroidery across the front. Curved brim, adjustable back.' },
+  { slug:'summit',    num:'08', name:'Summit',    price:23.99, kind:'Heather-Grey Trucker',    desc:'A heather-grey front with a white mesh back and no logo. Flat brim, snapback closure.' },
   { slug:'heritage',  num:'09', name:'Heritage',  price:28.99, kind:'Snapback',                desc:'A structured six-panel snapback with a flat brim and a tall front. Wears in slow, holds its shape.' },
   { slug:'standard',  num:'10', name:'Standard',  price:19.99, kind:'Snapback',                desc:'A plain structured snapback, flat brim, solid color. The blank canvas of the wall, priced to match.' },
   { slug:'rugged',    num:'11', name:'Rugged',    price:32.99, kind:'Twill Mesh-Back Patch',   desc:'Heavier twill front with a stitched patch and mesh back. Built sturdy, snap closure, flat brim that breaks in over time.' },
-  { slug:'canvas',    num:'12', name:'Canvas',    price:26.99, kind:'Blank Foam',              desc:'A blank foam-front trucker with mesh rear and a flat brim. No graphics on purpose, snapback closure.' },
+  { slug:'canvas',    num:'12', name:'Canvas',    price:26.99, kind:'White & Black Snapback',  desc:'A white front with a black flat brim, snapback build. No graphics on purpose, clean two-tone lines.' },
   { slug:'charcoal',  num:'13', name:'Charcoal',  price:27.99, kind:'Classic Snapback',        desc:'A dark, structured classic snapback with a flat brim. Plain front, clean lines, adjustable snap back.' },
-  { slug:'trailhead', num:'14', name:'Trailhead', price:24.99, kind:'Camping Sublimation',     desc:'Outdoor sublimation print across the front, curved brim, mesh back. Adjustable strap closure for long days out.' },
+  { slug:'trailhead', num:'14', name:'Trailhead', price:24.99, kind:'Brown Curved Snapback',   desc:'A brown and khaki cap with a curved brim and a snapback closure. Plain front, built for long days out.' },
 ];
 
-const PRODUCTS_INDEX = Object.fromEntries(PRODUCTS.map(p => [p.slug, p]));
+// Foundry supplement (not a hat, excluded from the bundle discount)
+const SUPPLEMENTS = [
+  { slug:'blood-support', name:'Blood Support', cat:'supplement', kind:'Foundry Supplement',
+    desc:'A daily capsule blend that supports healthy blood sugar and circulation. Ingredients: Cinnamon Bark, White Mulberry Leaf, Juniper Extract, Bitter Melon Extract, Berberine HCL, Chromium Picolinate.',
+    disclaimer:'These statements have not been evaluated by the FDA. This product is not intended to diagnose, treat, cure, or prevent any disease.',
+    ext:'png',
+    tiers:[
+      { id:'1b', label:'1 Bottle',  price:149.00 },
+      { id:'2b', label:'2 Bottles', price:180.00 },
+      { id:'3b', label:'3 Bottles', price:240.00 },
+    ],
+    defaultTier:'3b' },
+];
+
+// hats carry cat:'hat'; supplements carry cat:'supplement'
+PRODUCTS.forEach(p => { if (!p.cat) p.cat = 'hat'; });
+const ALL_PRODUCTS = PRODUCTS.concat(SUPPLEMENTS);
+const PRODUCTS_INDEX = Object.fromEntries(ALL_PRODUCTS.map(p => [p.slug, p]));
 const STORAGE_KEY = 'foundry_cart';
 
 function loadCart(){ try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { return []; } }
@@ -587,10 +626,21 @@ function saveCart(c){ localStorage.setItem(STORAGE_KEY, JSON.stringify(c)); }
 let cart = loadCart();
 
 // ─── Cart math: single-track hat bundle ───
-// rank units by price desc: 1st full, 2nd -20%, 3rd & every additional -40%
+// rank HAT units by price desc: 1st full, 2nd -20%, 3rd & every additional -40%.
+// Supplements (cat:'supplement') are NOT hats: they never discount and never
+// count toward the hat unit ranking.
+function isHat(line){
+  const p = PRODUCTS_INDEX[line.slug];
+  const cat = line.cat || (p && p.cat) || 'hat';
+  return cat === 'hat';
+}
 function cartTotals(cart){
   const units = [];
-  for (const line of cart){ for (let i=0;i<line.qty;i++) units.push(line.price); }
+  let nonHat = 0;
+  for (const line of cart){
+    if (isHat(line)){ for (let i=0;i<line.qty;i++) units.push(line.price); }
+    else nonHat += line.price * line.qty;
+  }
   units.sort((a,b)=>b-a);
   let total=0, discount=0;
   for (let i=0;i<units.length;i++){
@@ -598,29 +648,37 @@ function cartTotals(cart){
     else if (i===1){ total += units[i]*0.80; discount += units[i]*0.20; }
     else { total += units[i]*0.60; discount += units[i]*0.40; }
   }
-  const original = units.reduce((s,n)=>s+n,0);
-  return { total, discount, original, units: units.length };
+  const original = units.reduce((s,n)=>s+n,0) + nonHat;
+  return { total: total + nonHat, discount, original, units: units.length };
 }
 const bundleSubtotal = cartTotals;
 
 function fmt(n){ return '$' + n.toFixed(2).replace(/\.00$/, ''); }
+function imgFor(p){ return `images/${p.slug}.${p.ext || 'jpg'}`; }
+function priceFor(p){
+  if (p.tiers){
+    const t = p.tiers.find(t => t.id === p.defaultTier) || p.tiers[0];
+    return t.price;
+  }
+  return p.price;
+}
 
 // ─── Render grid ───
 function renderGrid(){
   const grid = document.getElementById('grid');
-  grid.innerHTML = PRODUCTS.map(p => `
+  grid.innerHTML = ALL_PRODUCTS.map(p => `
     <article class="card" data-slug="${p.slug}">
       <span class="hook"></span>
       <div class="card-plate">
         <div class="card-image">
-          <img src="images/${p.slug}.jpg" alt="${p.name} ${p.kind} cap" loading="lazy">
+          <img src="${imgFor(p)}" alt="${p.name} ${p.kind}" loading="lazy">
           <div class="card-overlay"><button class="card-quick" type="button">Quick Add</button></div>
         </div>
         <div class="card-meta">
           <div class="card-kind">${p.kind}</div>
           <div class="card-row">
             <h3 class="card-name">${p.name}</h3>
-            <div class="card-price">${fmt(p.price)}</div>
+            <div class="card-price">${p.tiers ? 'From ' : ''}${fmt(priceFor(p))}</div>
           </div>
         </div>
       </div>
@@ -631,8 +689,14 @@ function renderGrid(){
     quick.addEventListener('click', (e) => {
       e.stopPropagation();
       const p = PRODUCTS_INDEX[card.dataset.slug];
-      addToCart(p);
-      toast(`${p.name} added`);
+      if (p.tiers){
+        const t = p.tiers.find(t => t.id === p.defaultTier) || p.tiers[0];
+        addSupplement(p, t);
+        toast(`${p.name} added`);
+      } else {
+        addToCart(p);
+        toast(`${p.name} added`);
+      }
     });
     card.addEventListener('click', () => openModal(card.dataset.slug));
   });
@@ -640,17 +704,53 @@ function renderGrid(){
 
 // ─── Modal ───
 let modalProduct = null;
+let modalTier = null;
+function renderTiers(p){
+  const wrap = document.getElementById('modalTiers');
+  wrap.innerHTML = p.tiers.map(t => `
+    <button type="button" class="tier-opt${t.id === modalTier.id ? ' sel' : ''}" data-tier="${t.id}">
+      <span class="tier-left"><span class="tier-dot"></span><span class="tier-name">${t.label}</span></span>
+      <span class="tier-price">${fmt(t.price)}</span>
+    </button>`).join('');
+  wrap.querySelectorAll('.tier-opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      modalTier = p.tiers.find(t => t.id === btn.dataset.tier);
+      wrap.querySelectorAll('.tier-opt').forEach(b => b.classList.toggle('sel', b === btn));
+      document.getElementById('modalPrice').textContent = fmt(modalTier.price);
+      document.getElementById('modalAdd').textContent = `Add ${modalTier.label} to Bag`;
+    });
+  });
+}
 function openModal(slug){
   const p = PRODUCTS_INDEX[slug];
   if (!p) return;
   modalProduct = p;
-  document.getElementById('modalImg').src = `images/${p.slug}.jpg`;
+  document.getElementById('modalImg').src = imgFor(p);
   document.getElementById('modalImg').alt = p.name;
-  document.getElementById('modalKind').textContent = `${p.kind} · No. ${p.num}`;
+  document.getElementById('modalKind').textContent = p.num ? `${p.kind} · No. ${p.num}` : p.kind;
   document.getElementById('modalName').textContent = p.name;
-  document.getElementById('modalPrice').textContent = fmt(p.price);
   document.getElementById('modalDesc').textContent = p.desc;
-  document.getElementById('modalAdd').textContent = `Add ${p.name} to Bag`;
+  const hatFit = document.getElementById('modalHatFit');
+  const tierWrap = document.getElementById('modalTierWrap');
+  const disc = document.getElementById('modalDisclaimer');
+  if (p.tiers){
+    modalTier = p.tiers.find(t => t.id === p.defaultTier) || p.tiers[0];
+    document.getElementById('modalPrice').textContent = fmt(modalTier.price);
+    document.getElementById('modalIngredients').innerHTML = '<strong>Ingredients:</strong> Cinnamon Bark, White Mulberry Leaf, Juniper Extract, Bitter Melon Extract, Berberine HCL, Chromium Picolinate.';
+    renderTiers(p);
+    hatFit.hidden = true;
+    tierWrap.hidden = false;
+    document.getElementById('modalAdd').textContent = `Add ${modalTier.label} to Bag`;
+    disc.textContent = p.disclaimer;
+    disc.hidden = false;
+  } else {
+    modalTier = null;
+    document.getElementById('modalPrice').textContent = fmt(p.price);
+    hatFit.hidden = false;
+    tierWrap.hidden = true;
+    document.getElementById('modalAdd').textContent = `Add ${p.name} to Bag`;
+    disc.hidden = true;
+  }
   document.getElementById('modal').classList.add('open');
   document.getElementById('modalBg').classList.add('open');
   document.getElementById('modal').setAttribute('aria-hidden','false');
@@ -667,26 +767,43 @@ document.getElementById('modalBg').addEventListener('click', closeModal);
 document.addEventListener('keydown', e => { if (e.key === 'Escape'){ closeModal(); closeCart(); } });
 document.getElementById('modalAdd').addEventListener('click', () => {
   if (!modalProduct) return;
-  addToCart(modalProduct);
-  closeModal();
-  toast(`${modalProduct.name} added`);
+  if (modalProduct.tiers && modalTier){
+    addSupplement(modalProduct, modalTier);
+    closeModal();
+    toast(`${modalProduct.name} added`);
+  } else {
+    addToCart(modalProduct);
+    closeModal();
+    toast(`${modalProduct.name} added`);
+  }
 });
 
 // ─── Cart ───
 function addToCart(p){
-  const existing = cart.find(l => l.slug === p.slug);
+  const existing = cart.find(l => l.slug === p.slug && !l.tier);
   if (existing) existing.qty += 1;
-  else cart.push({ slug:p.slug, name:p.name, price:p.price, qty:1 });
+  else cart.push({ slug:p.slug, name:p.name, price:p.price, qty:1, cat:'hat' });
   saveCart(cart);
   renderCart();
   openCart();
 }
-function removeLine(slug){ cart = cart.filter(l => l.slug !== slug); saveCart(cart); renderCart(); }
-function changeQty(slug, d){
-  const line = cart.find(l => l.slug === slug);
+// supplement line: one cart line per chosen tier, never discounted
+function addSupplement(p, tier){
+  const key = p.slug + ':' + tier.id;
+  const existing = cart.find(l => l.key === key);
+  if (existing) existing.qty += 1;
+  else cart.push({ key, slug:p.slug, name:p.name, tier:tier.label, price:tier.price, qty:1, cat:'supplement' });
+  saveCart(cart);
+  renderCart();
+  openCart();
+}
+function lineId(l){ return l.key || l.slug; }
+function removeLine(id){ cart = cart.filter(l => lineId(l) !== id); saveCart(cart); renderCart(); }
+function changeQty(id, d){
+  const line = cart.find(l => lineId(l) === id);
   if (!line) return;
   line.qty = Math.max(0, line.qty + d);
-  if (line.qty === 0) cart = cart.filter(l => l.slug !== slug);
+  if (line.qty === 0) cart = cart.filter(l => lineId(l) !== id);
   saveCart(cart); renderCart();
 }
 
@@ -706,24 +823,26 @@ function renderCart(){
 
   items.innerHTML = cart.map(l => {
     const p = PRODUCTS_INDEX[l.slug];
+    const id = lineId(l);
+    const meta = l.tier ? l.tier : ((p ? p.kind : '') + ' · One Size');
     return `
     <div class="cart-line">
-      <div class="cart-line-img"><img src="images/${l.slug}.jpg" alt="${l.name}"></div>
+      <div class="cart-line-img"><img src="${p ? imgFor(p) : 'images/'+l.slug+'.jpg'}" alt="${l.name}"></div>
       <div class="cart-line-info">
         <div class="cart-line-top">
           <div>
             <div class="cart-line-name">${l.name}</div>
-            <div class="cart-line-meta">${p ? p.kind : ''} · One Size</div>
+            <div class="cart-line-meta">${meta}</div>
           </div>
           <div class="cart-line-price">${fmt(l.price)}</div>
         </div>
         <div class="cart-line-bottom">
           <div class="qty">
-            <button data-act="dec" data-slug="${l.slug}">−</button>
+            <button data-act="dec" data-id="${id}">−</button>
             <span>${l.qty}</span>
-            <button data-act="inc" data-slug="${l.slug}">+</button>
+            <button data-act="inc" data-id="${id}">+</button>
           </div>
-          <button class="cart-remove" data-act="rem" data-slug="${l.slug}">Remove</button>
+          <button class="cart-remove" data-act="rem" data-id="${id}">Remove</button>
         </div>
       </div>
     </div>`;
@@ -731,10 +850,10 @@ function renderCart(){
 
   items.querySelectorAll('button[data-act]').forEach(btn => {
     btn.addEventListener('click', () => {
-      const { act, slug } = btn.dataset;
-      if (act === 'inc') changeQty(slug, +1);
-      if (act === 'dec') changeQty(slug, -1);
-      if (act === 'rem') removeLine(slug);
+      const { act, id } = btn.dataset;
+      if (act === 'inc') changeQty(id, +1);
+      if (act === 'dec') changeQty(id, -1);
+      if (act === 'rem') removeLine(id);
     });
   });
 
