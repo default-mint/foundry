@@ -344,6 +344,8 @@
   <a href="privacy.html">Privacy</a>
   <a href="returns.html">Returns</a>
   <a href="shipping.html">Shipping</a>
+  <br><br>
+  <span style="opacity:0.7;">These statements have not been evaluated by the FDA. This product is not intended to diagnose, treat, cure, or prevent any disease.</span>
 </footer>
 
 <script>
@@ -353,20 +355,21 @@ const PRODUCTS_INDEX = {};
 const PRODUCTS = [
   { slug:'drifter',   name:'Drifter',   price:24.99, kind:'Distressed Unstructured' },
   { slug:'ranger',    name:'Ranger',    price:26.99, kind:'Embroidered Patch' },
-  { slug:'ember',     name:'Ember',     price:28.99, kind:'Sublimation Print' },
-  { slug:'classic',   name:'Classic',   price:19.99, kind:'Retro Five-Panel' },
+  { slug:'ember',     name:'Ember',     price:28.99, kind:'Grey Canvas Mesh-Back' },
+  { slug:'classic',   name:'Classic',   price:19.99, kind:'Black Fitted Twill' },
   { slug:'varsity',   name:'Varsity',   price:24.99, kind:'Collegiate Patch' },
-  { slug:'scout',     name:'Scout',     price:21.99, kind:'Structured Mesh-Back' },
-  { slug:'mesa',      name:'Mesa',      price:22.99, kind:'Classic Mesh' },
-  { slug:'summit',    name:'Summit',    price:23.99, kind:'Outdoor Performance' },
+  { slug:'scout',     name:'Scout',     price:21.99, kind:'Charcoal Flag Cap' },
+  { slug:'mesa',      name:'Mesa',      price:22.99, kind:'Camo-Brim Embroidered' },
+  { slug:'summit',    name:'Summit',    price:23.99, kind:'Heather-Grey Trucker' },
   { slug:'heritage',  name:'Heritage',  price:28.99, kind:'Snapback' },
   { slug:'standard',  name:'Standard',  price:19.99, kind:'Snapback' },
   { slug:'rugged',    name:'Rugged',    price:32.99, kind:'Twill Mesh-Back Patch' },
-  { slug:'canvas',    name:'Canvas',    price:26.99, kind:'Blank Foam' },
+  { slug:'canvas',    name:'Canvas',    price:26.99, kind:'White & Black Snapback' },
   { slug:'charcoal',  name:'Charcoal',  price:27.99, kind:'Classic Snapback' },
-  { slug:'trailhead', name:'Trailhead', price:24.99, kind:'Camping Sublimation' },
+  { slug:'trailhead', name:'Trailhead', price:24.99, kind:'Brown Curved Snapback' },
+  { slug:'blood-support', name:'Blood Support', kind:'Foundry Supplement', cat:'supplement', ext:'png' },
 ];
-PRODUCTS.forEach(p => PRODUCTS_INDEX[p.slug] = p);
+PRODUCTS.forEach(p => { if (!p.cat) p.cat = 'hat'; PRODUCTS_INDEX[p.slug] = p; });
 
 const PROMOS = {
   'FOU10': { type: 'pct', value: 10, label: '10% off' },
@@ -385,9 +388,19 @@ function saveCart(c){ localStorage.setItem(STORAGE_KEY, JSON.stringify(c)); }
 let cart = loadCart();
 
 // ─── Cart math: single-track hat bundle (1st full / 2nd -20% / 3rd+ -40%) ───
+// Supplements (cat:'supplement') are excluded: never discounted, never ranked.
+function isHat(line){
+  const p = PRODUCTS_INDEX[line.slug];
+  const cat = line.cat || (p && p.cat) || 'hat';
+  return cat === 'hat';
+}
 function bundleSubtotal(c){
   const units = [];
-  for (const line of c){ for (let i=0;i<line.qty;i++) units.push(line.price); }
+  let nonHat = 0;
+  for (const line of c){
+    if (isHat(line)){ for (let i=0;i<line.qty;i++) units.push(line.price); }
+    else nonHat += line.price * line.qty;
+  }
   units.sort((a,b)=>b-a);
   let total=0, discount=0;
   for (let i=0;i<units.length;i++){
@@ -395,9 +408,10 @@ function bundleSubtotal(c){
     else if (i===1){ total += units[i]*0.80; discount += units[i]*0.20; }
     else { total += units[i]*0.60; discount += units[i]*0.40; }
   }
-  const original = units.reduce((s,n)=>s+n,0);
-  return { total, discount, original, units: units.length };
+  const original = units.reduce((s,n)=>s+n,0) + nonHat;
+  return { total: total + nonHat, discount, original, units: units.length };
 }
+function imgFor(p){ return `images/${p.slug}.${p && p.ext ? p.ext : 'jpg'}`; }
 function fmt(n){ return '$' + n.toFixed(2).replace(/\.00$/, ''); }
 
 function renderSummary(){
@@ -405,7 +419,7 @@ function renderSummary(){
   const totals = document.getElementById('summaryTotals');
   const promoBlock = document.getElementById('promoBlock');
   const count = cart.reduce((s,l)=>s+l.qty,0);
-  document.getElementById('summaryCount').textContent = count + (count === 1 ? ' hat' : ' hats');
+  document.getElementById('summaryCount').textContent = count + (count === 1 ? ' item' : ' items');
 
   if (cart.length === 0){
     items.innerHTML = `<div class="summary-empty"><p>Your bag is empty.</p><span>Grab one off the wall.</span><br><a href="index.html">Back to the Wall</a></div>`;
@@ -418,11 +432,11 @@ function renderSummary(){
 
   items.innerHTML = cart.map(l => {
     const p = PRODUCTS_INDEX[l.slug];
-    const meta = (p ? p.kind : '') + ' · One Size';
+    const meta = l.tier ? l.tier : ((p ? p.kind : '') + ' · One Size');
     return `
     <div class="summary-line">
       <div class="summary-line-img">
-        <img src="images/${l.slug}.jpg" alt="${l.name}">
+        <img src="${p ? imgFor(p) : 'images/'+l.slug+'.jpg'}" alt="${l.name}">
         ${l.qty > 1 ? `<span class="qty-bubble">${l.qty}</span>` : ''}
       </div>
       <div class="summary-line-info">
