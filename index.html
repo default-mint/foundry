@@ -665,6 +665,12 @@ const bundleSubtotal = cartTotals;
 
 function fmt(n){ return '$' + n.toFixed(2).replace(/\.00$/, ''); }
 function imgFor(p){ return `images/${p.slug}.${p.ext || 'jpg'}`; }
+function suppImg(p, t){
+  const base = `images/${p.slug}`;
+  if (t && t.id === '2b') return `${base}-2.png`;
+  if (t && t.id === '3b') return `${base}-3.png`;
+  return `${base}.png`;
+}
 function priceFor(p){
   if (p.tiers){
     const t = p.tiers.find(t => t.id === p.defaultTier) || p.tiers[0];
@@ -726,6 +732,7 @@ function renderTiers(p){
     btn.addEventListener('click', () => {
       modalTier = p.tiers.find(t => t.id === btn.dataset.tier);
       wrap.querySelectorAll('.tier-opt').forEach(b => b.classList.toggle('sel', b === btn));
+      document.getElementById('modalImg').src = suppImg(p, modalTier);
       document.getElementById('modalPrice').textContent = fmt(modalTier.price);
       document.getElementById('modalAdd').textContent = `Add ${modalTier.label} to Bag`;
     });
@@ -745,6 +752,7 @@ function openModal(slug){
   const disc = document.getElementById('modalDisclaimer');
   if (p.tiers){
     modalTier = p.tiers.find(t => t.id === p.defaultTier) || p.tiers[0];
+    document.getElementById('modalImg').src = suppImg(p, modalTier);
     document.getElementById('modalPrice').textContent = fmt(modalTier.price);
     document.getElementById('modalIngredients').innerHTML = '<strong>Ingredients:</strong> Cinnamon Bark, White Mulberry Leaf, Juniper Extract, Bitter Melon Extract, Berberine HCL, Chromium Picolinate.';
     renderTiers(p);
